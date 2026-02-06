@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Analyzer | Google Design</title>
+    <title>Path Analyzer | Network Toolbox</title>
     <link href="css/output.css" rel="stylesheet">
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono&display=swap"
         rel="stylesheet">
     <link rel="stylesheet"
@@ -14,29 +15,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
     <style>
-        :root {
-            --google-blue: #1a73e8;
-            --google-gray: #5f6368;
-            --google-border: #dadce0;
-            /* 將 JS 中的顏色定義移至 CSS 變數 */
-            --color-hq: #1a73e8;
-            --color-dr: #f9ab00;
-            --color-branch: #1e8e3e;
-            --color-transit: #9333ea;
-            --color-tko: #db2777;
-            --color-internet: #5f6368;
-        }
-
         body {
             font-family: 'Google Sans', sans-serif;
-            background-color: #ffffff;
-            color: #3c4043;
         }
 
+        .jetbrains-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Essential for Vis.js container */
         #network-wrapper {
             position: relative;
             flex: 1;
-            min-width: 0;
             height: 100%;
         }
 
@@ -49,71 +39,99 @@
             outline: none;
         }
 
-        .md-card {
-            background: #fff;
-            border-radius: 8px;
-            border: 1px solid var(--google-border);
-            transition: box-shadow 0.3s;
+        /* Custom Scrollbar for side log */
+        #log-container::-webkit-scrollbar {
+            width: 4px;
         }
 
-        .jetbrains {
-            font-family: 'Roboto Mono', monospace;
-        }
-
-        .status-badge {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 500;
+        #log-container::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
         }
     </style>
 </head>
 
-<body class="h-screen flex flex-col overflow-hidden">
-    <nav class="h-14 border-b border-gray-200 px-4 flex items-center justify-between bg-white z-20">
-        <div class="flex items-center gap-2">
-            <div class="p-1.5 bg-blue-50 rounded-lg text-blue-600">
-                <span class="material-symbols-outlined text-2xl">account_tree</span>
-            </div>
-            <span class="text-lg font-medium tracking-tight text-gray-700">Network Topology <span
-                    class="text-gray-400 font-normal">| Analyzer</span></span>
+<body class="h-screen flex flex-col overflow-hidden bg-base-200">
+
+    <nav class="navbar bg-base-100 border-b border-base-300 px-6 h-16 z-30 shadow-sm">
+        <div class="flex-1 gap-2">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div class="p-2 bg-primary/10 rounded-lg text-primary">
+                    <span class="material-symbols-outlined text-2xl">account_tree</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold leading-none">Route Analyzer</span>
+                    <span class="text-[10px] uppercase tracking-widest text-base-content/50 font-bold">Topology
+                        Engine</span>
+                </div>
+            </a>
         </div>
 
-        <div class="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1">
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold text-gray-400">SRC</span>
-                <input type="text" id="srcIP" value="10.0.1.100"
-                    class="bg-transparent border-none text-sm w-32 focus:ring-0 jetbrains">
+        <div class="flex-none gap-4">
+            <div class="join shadow-sm border border-base-300">
+                <div class="join-item flex items-center bg-base-200 px-3 gap-2 border-r border-base-300">
+                    <span class="text-[10px] font-black text-base-content/40 uppercase">Source</span>
+                    <input type="text" id="srcIP" value="10.0.1.100"
+                        class="bg-transparent outline-none text-sm w-28 jetbrains-mono font-medium focus:text-primary transition-colors">
+                </div>
+                <div class="join-item flex items-center bg-base-200 px-3 gap-2">
+                    <span class="text-[10px] font-black text-base-content/40 uppercase">Dest</span>
+                    <input type="text" id="dstIP" value="8.8.8.8"
+                        class="bg-transparent outline-none text-sm w-28 jetbrains-mono font-medium focus:text-primary transition-colors">
+                </div>
+                <button onclick="analyzer.tracePath()" class="btn btn-primary join-item px-6">
+                    <span class="material-symbols-outlined text-sm">play_arrow</span>
+                    Run Analysis
+                </button>
             </div>
-            <span class="text-gray-300">|</span>
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold text-gray-400">DST</span>
-                <input type="text" id="dstIP" value="8.8.8.8"
-                    class="bg-transparent border-none text-sm w-32 focus:ring-0 jetbrains">
-            </div>
-            <button onclick="analyzer.tracePath()"
-                class="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-4 py-1.5 rounded text-sm font-medium transition-colors shadow-sm">
-                Run Analysis
-            </button>
+
+            <div class="divider divider-horizontal mx-1"></div>
+
+            <div class="badge badge-outline badge-sm text-base-content/40 py-3 font-mono">v3.2-STABLE</div>
         </div>
-        <div class="w-24"></div>
     </nav>
 
     <main class="flex flex-1 overflow-hidden">
-        <section id="network-wrapper" class="bg-gray-50">
+
+        <section id="network-wrapper" class="bg-base-200 relative">
+            <div
+                class="absolute bottom-6 left-6 z-10 p-4 bg-base-100/80 backdrop-blur border border-base-300 rounded-xl shadow-xl flex flex-col gap-2">
+                <span class="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-1">Region Map</span>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#1a73e8]"></span><span
+                            class="text-xs font-medium">HQ</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#f9ab00]"></span><span
+                            class="text-xs font-medium">DR</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#1e8e3e]"></span><span
+                            class="text-xs font-medium">Branch</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#db2777]"></span><span
+                            class="text-xs font-medium">TKO</span></div>
+                </div>
+            </div>
+
             <div id="mynetwork"></div>
         </section>
 
-        <aside class="w-[380px] border-l border-gray-200 flex flex-col bg-white overflow-hidden">
-            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="font-medium text-sm flex items-center gap-2">
-                    <span class="material-symbols-outlined text-gray-400">insights</span> Routing Decisions
+        <aside class="w-[400px] border-l border-base-300 flex flex-col bg-base-100 shadow-2xl z-20">
+            <div class="p-5 border-b border-base-200 bg-base-100 flex items-center justify-between">
+                <h3 class="font-bold text-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">insights</span>
+                    ROUTING DECISIONS
                 </h3>
+                <span class="badge badge-ghost text-[10px]">Real-time Trace</span>
             </div>
-            <div id="log-container" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div class="flex flex-col items-center justify-center h-full text-gray-300">
-                    <span class="material-symbols-outlined text-5xl mb-2">radar</span>
-                    <p class="text-xs uppercase tracking-tighter">Enter IP to Start Trace</p>
+
+            <div id="log-container" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <div class="flex flex-col items-center justify-center h-full text-base-content/20 text-center">
+                    <span class="material-symbols-outlined text-6xl mb-4">radar</span>
+                    <p class="text-sm font-bold uppercase tracking-widest">Awaiting Command</p>
+                    <p class="text-xs mt-1">Enter Source & Destination IP<br>to visualize the path logic.</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-base-200/50 border-t border-base-300">
+                <div class="text-[10px] text-base-content/40 font-medium">
+                    INFRASTRUCTURE CONTEXT: 10 Nodes, 10 Edges loaded.
                 </div>
             </div>
         </aside>
@@ -121,7 +139,7 @@
 
     <script src="js/route.js"></script>
     <script>
-        // 將原先在 JS 裡的資料陣列移到這裡
+        // Data configurations (Kept Original)
         const NETWORK_CONFIG = {
             nodes: [
                 { id: 'H1', label: 'HQ Host\n192.168.1.10', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
@@ -153,7 +171,7 @@
             }
         };
 
-        // 初始化分析器
+        // Initialize Analyzer
         const analyzer = new NetworkAnalyzer('mynetwork', NETWORK_CONFIG);
         window.onload = () => analyzer.init();
     </script>
