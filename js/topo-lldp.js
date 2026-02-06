@@ -7,7 +7,7 @@
 // --- 0. 環境設定 ---
 const ENV = {
     IS_DEBUG: true,         // true: 測試模式 (會載入測試資料), false: 正式模式
-    TEST_DATA_URL: 'topo-data.js' // 你的偷吃步 JS 檔案路徑
+    TEST_DATA_URL: 'sample.json' // 你的偷吃步 JS 檔案路徑
 };
 // --- 1. 配置與常量 ---
 const THEME = {
