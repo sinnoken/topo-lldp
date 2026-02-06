@@ -5,6 +5,9 @@
         "build": "npx tailwindcss -i ./css/input.css -o ./css/output.css --minify"
     },
     "devDependencies": {
-        "tailwindcss": "^3.4.0"
+        "tailwindcss": "^3.4.0",
+        "daisyui": "^4.4.24",
+        "autoprefixer": "^10.0.0",
+        "postcss": "^8.0.0"
     }
 }
