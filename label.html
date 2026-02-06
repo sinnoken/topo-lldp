@@ -41,7 +41,8 @@
         const edges = new vis.DataSet([
             { from: 1, to: 3, label: 'Main Link', labelFrom: 'PORT 80', labelTo: 'ACK' },
             { from: 1, to: 2, label: 'Active', labelFrom: 'REQ', labelTo: 'RES' },
-            { from: 4, to: 4, label: 'Self Sync', labelFrom: 'Backup', labelTo: 'Restore' }
+            { from: 4, to: 4, label: 'Self Sync', labelFrom: 'Backup', labelTo: 'Restore' },
+            { from: 1, to: 4, label: 'Sync', labelFrom: 'Server', labelTo: 'Database' }
         ]);
 
         const container = document.getElementById('mynetwork');
