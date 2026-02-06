@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARP Map 工具 | Network Toolbox</title>
+    <title>ARP Map Mapper | Network Toolbox</title>
     <link href="css/output.css" rel="stylesheet">
+
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
@@ -13,90 +14,82 @@
     <style>
         body {
             font-family: 'Google Sans', sans-serif;
-            background-color: #f8f9fa;
         }
 
-        textarea {
-            font-family: 'ui-monospace', monospace;
-        }
-
-        .status-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: .5;
-            }
+        .font-mono-custom {
+            font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
         }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col bg-base-200">
 
-    <nav class="bg-white border-b border-gray-200 px-8 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-2">
+    <nav class="navbar bg-base-100 border-b border-base-300 px-6 h-16 shadow-sm">
+        <div class="flex-1">
             <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <span class="material-symbols-outlined text-blue-600 text-3xl">settings_ethernet</span>
-                <span class="text-xl font-bold text-gray-800">Network <span class="text-blue-600">Toolbox</span></span>
+                <span class="material-symbols-outlined text-primary text-3xl">settings_ethernet</span>
+                <span class="text-xl font-bold text-base-content">Network <span
+                        class="text-primary">Toolbox</span></span>
             </a>
         </div>
-        <div class="text-sm text-gray-500 font-medium hidden md:block">Infrastructure Analysis Suite</div>
+        <div class="flex-none hidden md:block">
+            <span class="text-sm font-medium text-base-content/50">Infrastructure Analysis Suite</span>
+        </div>
     </nav>
 
     <main class="flex-grow container mx-auto px-4 py-8 max-w-6xl">
-        <header class="mb-6 flex justify-between items-end">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
                 <div class="flex items-center gap-3 mb-2">
-                    <span class="material-symbols-outlined text-blue-600">bolt</span>
-                    <h1 class="text-3xl font-bold text-gray-900">ARP 自動轉換器</h1>
+                    <span class="material-symbols-outlined text-primary text-4xl">dataset</span>
+                    <h1 class="text-3xl font-bold text-base-content">ARP Auto-Mapper</h1>
                 </div>
-                <p class="text-gray-600">貼上數據即自動完成轉換並複製 JSON。</p>
+                <p class="text-base-content/60">Paste raw logs to instantly generate structured JSON and auto-copy to
+                    clipboard.</p>
             </div>
-            <div id="statusTag"
-                class="hidden items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-bold">
-                <span class="material-symbols-outlined text-sm">check_circle</span> 已自動複製到剪貼簿
+
+            <div id="statusTag" class="invisible alert alert-success py-2 px-4 shadow-lg w-fit">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                <span class="text-sm font-bold">Auto-copied to clipboard!</span>
             </div>
         </header>
 
-        <div class="grid md:grid-cols-2 gap-6 h-[550px]">
-            <div class="flex flex-col h-full">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="text-sm font-bold text-gray-700">原始數據 (Raw Data)</label>
-                    <button onclick="clearInput()" class="text-xs text-red-500 hover:underline flex items-center gap-1">
-                        <span class="material-symbols-outlined text-xs">delete</span>清空內容
+        <div class="grid md:grid-cols-2 gap-8 h-fit lg:h-[600px]">
+            <div class="flex flex-col h-full gap-3">
+                <div class="flex justify-between items-center px-1">
+                    <label class="text-sm font-bold uppercase tracking-wider text-base-content/70">Raw Data
+                        Input</label>
+                    <button onclick="clearInput()" class="btn btn-ghost btn-xs text-error gap-1">
+                        <span class="material-symbols-outlined text-sm">delete</span> Clear
                     </button>
                 </div>
                 <textarea id="input" oninput="autoProcess()"
-                    class="flex-grow p-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none shadow-sm transition-all"
-                    placeholder="在此貼上 ARP Log..."></textarea>
+                    class="textarea textarea-bordered flex-grow font-mono-custom text-sm shadow-inner focus:textarea-primary leading-relaxed"
+                    placeholder="Paste ARP logs here..."></textarea>
             </div>
 
-            <div class="flex flex-col h-full">
-                <label class="block text-sm font-bold text-gray-700 mb-2">JSON 輸出</label>
+            <div class="flex flex-col h-full gap-3">
+                <div class="flex justify-between items-center px-1">
+                    <label class="text-sm font-bold uppercase tracking-wider text-base-content/70">JSON Output</label>
+                </div>
                 <textarea id="output" readonly
-                    class="flex-grow p-4 border border-gray-300 rounded-2xl bg-gray-50 text-gray-500 outline-none resize-none shadow-sm font-mono text-sm"
-                    placeholder="等待輸入..."></textarea>
-                <button id="copyBtn" onclick="manualCopy()"
-                    class="mt-4 bg-gray-800 hover:bg-black text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
-                    <span class="material-symbols-outlined">content_copy</span> 手動複製
+                    class="textarea textarea-bordered flex-grow font-mono-custom text-sm bg-base-100 shadow-inner text-primary"
+                    placeholder="Waiting for input..."></textarea>
+
+                <button id="copyBtn" onclick="manualCopy()" class="btn btn-neutral w-full shadow-lg gap-2 mt-2">
+                    <span class="material-symbols-outlined text-lg">content_copy</span>
+                    Manual Copy JSON
                 </button>
             </div>
         </div>
     </main>
 
-    <footer class="py-8 text-center text-gray-400 text-xs">
-        &copy; 2026 Network Admin Suite
+    <footer class="py-8 text-center text-base-content/40 text-xs border-t border-base-300 bg-base-100">
+        &copy; 2026 Network Admin Suite. Open Source Infrastructure Tools.
     </footer>
 
     <script>
-        // 核心解析邏輯
+        // Core Parsing Logic (Kept Original Logic)
         function universalArpParser(rawText) {
             const root = { arpMap: {} };
             const blocks = rawText.split(/_{5,}/);
@@ -128,15 +121,13 @@
             return root;
         }
 
-        // 自動處理邏輯
+        // Automatic Processing
         function autoProcess() {
             const input = document.getElementById('input').value;
             const outputArea = document.getElementById('output');
-            const statusTag = document.getElementById('statusTag');
 
             if (!input.trim()) {
                 outputArea.value = "";
-                statusTag.classList.add('hidden');
                 return;
             }
 
@@ -144,23 +135,21 @@
             const jsonString = JSON.stringify(result, null, 4);
             outputArea.value = jsonString;
 
-            // 自動複製到剪貼簿
+            // Auto-copy to clipboard
             navigator.clipboard.writeText(jsonString).then(() => {
                 showStatus();
             }).catch(err => {
-                console.error('自動複製失敗', err);
+                console.error('Auto-copy failed', err);
             });
         }
 
         function showStatus() {
             const statusTag = document.getElementById('statusTag');
-            statusTag.classList.remove('hidden');
-            statusTag.classList.add('flex');
+            statusTag.classList.remove('invisible');
 
-            // 3秒後自動消失
+            // Auto hide after 3 seconds
             setTimeout(() => {
-                statusTag.classList.add('hidden');
-                statusTag.classList.remove('flex');
+                statusTag.classList.add('invisible');
             }, 3000);
         }
 
@@ -174,7 +163,7 @@
         function clearInput() {
             document.getElementById('input').value = "";
             document.getElementById('output').value = "";
-            document.getElementById('statusTag').classList.add('hidden');
+            document.getElementById('statusTag').classList.add('invisible');
         }
     </script>
 </body>
