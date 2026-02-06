@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARP Map 工具 | Network Toolbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <style>
+        body {
+            font-family: 'Google Sans', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        textarea {
+            font-family: 'ui-monospace', monospace;
+        }
+
+        .status-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <nav class="bg-white border-b border-gray-200 px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span class="material-symbols-outlined text-blue-600 text-3xl">settings_ethernet</span>
+                <span class="text-xl font-bold text-gray-800">Network <span class="text-blue-600">Toolbox</span></span>
+            </a>
+        </div>
+        <div class="text-sm text-gray-500 font-medium hidden md:block">Infrastructure Analysis Suite</div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-6 flex justify-between items-end">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="material-symbols-outlined text-blue-600">bolt</span>
+                    <h1 class="text-3xl font-bold text-gray-900">ARP 自動轉換器</h1>
+                </div>
+                <p class="text-gray-600">貼上數據即自動完成轉換並複製 JSON。</p>
+            </div>
+            <div id="statusTag"
+                class="hidden items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-bold">
+                <span class="material-symbols-outlined text-sm">check_circle</span> 已自動複製到剪貼簿
+            </div>
+        </header>
+
+        <div class="grid md:grid-cols-2 gap-6 h-[550px]">
+            <div class="flex flex-col h-full">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-sm font-bold text-gray-700">原始數據 (Raw Data)</label>
+                    <button onclick="clearInput()" class="text-xs text-red-500 hover:underline flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs">delete</span>清空內容
+                    </button>
+                </div>
+                <textarea id="input" oninput="autoProcess()"
+                    class="flex-grow p-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none shadow-sm transition-all"
+                    placeholder="在此貼上 ARP Log..."></textarea>
+            </div>
+
+            <div class="flex flex-col h-full">
+                <label class="block text-sm font-bold text-gray-700 mb-2">JSON 輸出</label>
+                <textarea id="output" readonly
+                    class="flex-grow p-4 border border-gray-300 rounded-2xl bg-gray-50 text-gray-500 outline-none resize-none shadow-sm font-mono text-sm"
+                    placeholder="等待輸入..."></textarea>
+                <button id="copyBtn" onclick="manualCopy()"
+                    class="mt-4 bg-gray-800 hover:bg-black text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
+                    <span class="material-symbols-outlined">content_copy</span> 手動複製
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-8 text-center text-gray-400 text-xs">
+        &copy; 2026 Network Admin Suite
+    </footer>
+
+    <script>
+        // 核心解析邏輯
+        function universalArpParser(rawText) {
+            const root = { arpMap: {} };
+            const blocks = rawText.split(/_{5,}/);
+
+            blocks.forEach(block => {
+                const lines = block.trim().split('\n');
+                if (lines.length < 1) return;
+
+                const headerMatch = lines[0].match(/^([\w-]+)\s*\(([\d\.]+)\):/);
+                if (!headerMatch) return;
+
+                const hostname = headerMatch[1];
+                const entries = [];
+
+                lines.forEach(line => {
+                    const coreMatch = line.trim().match(/ifname=(\S+)\s+([\d\.]+)\s+([0-9a-f:]{17})/i);
+                    if (coreMatch) {
+                        const [_, rawIface, ip, mac] = coreMatch;
+                        const lowerMac = mac.toLowerCase();
+                        if (ip.startsWith('224.') || ip.startsWith('169.254.')) return;
+                        if (lowerMac === '00:00:00:00:00:00' || lowerMac === 'ff:ff:ff:ff:ff:ff') return;
+
+                        entries.push({ port: rawIface, mac: lowerMac, ip: ip });
+                    }
+                });
+
+                root.arpMap[hostname] = { mgmtIp: headerMatch[2], entries: entries };
+            });
+            return root;
+        }
+
+        // 自動處理邏輯
+        function autoProcess() {
+            const input = document.getElementById('input').value;
+            const outputArea = document.getElementById('output');
+            const statusTag = document.getElementById('statusTag');
+
+            if (!input.trim()) {
+                outputArea.value = "";
+                statusTag.classList.add('hidden');
+                return;
+            }
+
+            const result = universalArpParser(input);
+            const jsonString = JSON.stringify(result, null, 4);
+            outputArea.value = jsonString;
+
+            // 自動複製到剪貼簿
+            navigator.clipboard.writeText(jsonString).then(() => {
+                showStatus();
+            }).catch(err => {
+                console.error('自動複製失敗', err);
+            });
+        }
+
+        function showStatus() {
+            const statusTag = document.getElementById('statusTag');
+            statusTag.classList.remove('hidden');
+            statusTag.classList.add('flex');
+
+            // 3秒後自動消失
+            setTimeout(() => {
+                statusTag.classList.add('hidden');
+                statusTag.classList.remove('flex');
+            }, 3000);
+        }
+
+        function manualCopy() {
+            const output = document.getElementById('output');
+            if (!output.value) return;
+            navigator.clipboard.writeText(output.value);
+            showStatus();
+        }
+
+        function clearInput() {
+            document.getElementById('input').value = "";
+            document.getElementById('output').value = "";
+            document.getElementById('statusTag').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>
