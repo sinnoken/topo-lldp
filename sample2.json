@@ -1,0 +1,39 @@
+{
+    "nodes": [
+        {
+            "id": "CORE-SW-01",
+            "label": "CORE-SW-01",
+            "group": "switch"
+        },
+        {
+            "id": "FGT-EXT-01",
+            "label": "FGT-EXT-01",
+            "group": "firewall"
+        },
+        {
+            "id": "SRV-WEB-01",
+            "label": "SRV-WEB-01",
+            "group": "server"
+        }
+    ],
+    "edges": [
+        {
+            "from": "CORE-SW-01",
+            "to": "FGT-EXT-01",
+            "label": "10G-Trunk",
+            "color": {
+                "color": "red"
+            },
+            "width": 3
+        },
+        {
+            "from": "CORE-SW-01",
+            "to": "SRV-WEB-01",
+            "label": "1G-Eth1",
+            "color": {
+                "color": "blue"
+            },
+            "width": 1
+        }
+    ]
+}

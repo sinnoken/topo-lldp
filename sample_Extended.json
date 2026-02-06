@@ -1,0 +1,7 @@
+{
+"nodes": [],
+  "edges": [
+    {"from":"CORE_FW_01","to":"CORE_FW_02","labelFrom":"eth2","labelTo":"trunk2"},
+    {"from":"CORE_FW_01","to":"CORE_FW_02","labelFrom":"eth2","labelTo":"trunk2"}
+  ]
+}
