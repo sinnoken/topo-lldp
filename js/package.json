@@ -1,8 +1,0 @@
-{
-    "devDependencies": {
-        "tailwindcss": "latest"
-    },
-    "scripts": {
-        "build": "npx tailwindcss -i ./css/input.css -o ./css/output.css --minify"
-    }
-}
