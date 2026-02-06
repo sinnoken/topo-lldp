@@ -1,6 +1,5 @@
 {
     "nodes": [
-        /* DC-01: 核心機房 (Core Hub) */
         {
             "id": "DC1_CORE_FW_01",
             "label": "DC1-FW-01",
@@ -29,7 +28,6 @@
             "value": 8,
             "shape": "dot"
         },
-        /* DC-02: 生產環境機房 (Prod DC) */
         {
             "id": "DC2_DIST_SW_01",
             "label": "DC2-DIST-01",
@@ -58,7 +56,6 @@
             "value": 5,
             "shape": "dot"
         },
-        /* DC-03: 備援機房 (DR Site) */
         {
             "id": "DC3_DIST_SW_01",
             "label": "DC3-DIST-01",
@@ -87,7 +84,6 @@
             "value": 5,
             "shape": "dot"
         },
-        /* DC-04: 研發測試機房 (R&D Lab) */
         {
             "id": "DC4_ACC_SW_01",
             "label": "DC4-ACC-01",
@@ -116,7 +112,6 @@
             "value": 3,
             "shape": "dot"
         },
-        /* DC-05: 辦公室機房 (Office IT) */
         {
             "id": "DC5_ACC_SW_01",
             "label": "DC5-ACC-01",
@@ -147,7 +142,6 @@
         }
     ],
     "edges": [
-        /* 跨機房骨幹連線 (Inter-DC Backbone) */
         {
             "from": "DC1_CORE_SW_01",
             "to": "DC1_CORE_SW_02",
@@ -178,7 +172,6 @@
                 "color": "#3B82F6"
             }
         },
-        /* DC1 to DC2 & DC3 (Core to Distribution) */
         {
             "from": "DC1_CORE_SW_01",
             "to": "DC2_DIST_SW_01",
@@ -219,7 +212,6 @@
                 "color": "#10B981"
             }
         },
-        /* DC2 (Prod) Server Connections */
         {
             "from": "DC2_DIST_SW_01",
             "to": "DC2_SRV_PROD_01",
@@ -240,7 +232,6 @@
                 "color": "#D1D5DB"
             }
         },
-        /* DC3 (DR) Server Connections */
         {
             "from": "DC3_DIST_SW_01",
             "to": "DC3_SRV_DR_01",
@@ -261,7 +252,6 @@
                 "color": "#D1D5DB"
             }
         },
-        /* DC1 to DC4 & DC5 (Core to Access) */
         {
             "from": "DC1_CORE_SW_01",
             "to": "DC4_ACC_SW_01",
@@ -302,7 +292,6 @@
                 "color": "#D1D5DB"
             }
         },
-        /* End Device Connections (DC4 & DC5) */
         {
             "from": "DC4_ACC_SW_01",
             "to": "DC4_DEV_NODE_01",
