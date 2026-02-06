@@ -1,6 +1,6 @@
 # LLDP Topology Viewer 使用手冊
 
-> **切換語言：[English](readme.md) | [繁體中文]**
+> **切換語言：[English](README.md) | [繁體中文]**
 
 本工具基於 **Vis.js** 開發，旨在將複雜的網路設備連接數據（LLDP/OSPF）轉換為直觀、互動式的 3D/平面拓撲圖。
 
