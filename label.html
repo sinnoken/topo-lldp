@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vis-network 10.0.2 Advanced Integration</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network@10.0.2/dist/vis-network.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+
+        #mynetwork {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mynetwork"></div>
+
+    <script type="text/javascript">
+        // 定義 SVG 圖示
+        const svgIcon = (color) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                <rect x="2" y="2" width="36" height="36" rx="8" fill="white" stroke="${color}" stroke-width="2"/>
+                <circle cx="20" cy="20" r="10" fill="${color}"/>
+            </svg>`)}`;
+
+        // 1. 資料集定義
+        const nodes = new vis.DataSet([
+            { id: 1, label: 'Server', group: 'server' },
+            { id: 2, label: 'Client A', group: 'client' },
+            { id: 3, label: 'Client B', group: 'client' },
+            { id: 4, label: 'Database', group: 'database' }
+        ]);
+
+        const edges = new vis.DataSet([
+            { from: 1, to: 3, label: 'Main Link', labelFrom: 'PORT 80', labelTo: 'ACK' },
+            { from: 1, to: 2, label: 'Active', labelFrom: 'REQ', labelTo: 'RES' },
+            { from: 4, to: 4, label: 'Self Sync', labelFrom: 'Backup', labelTo: 'Restore' }
+        ]);
+
+        const container = document.getElementById('mynetwork');
+
+        // 2. 配置項 (包含 Group 設定)
+        const options = {
+            nodes: {
+                font: { face: 'Arial', size: 14 }
+            },
+            groups: {
+                server: { shape: 'image', image: svgIcon('#2B7CE9') },
+                client: { shape: 'image', image: svgIcon('#10ac84') },
+                database: { shape: 'image', image: svgIcon('#f5222d') }
+            },
+            edges: {
+                font: { size: 12, align: 'middle', color: '#34495e' },
+                smooth: { type: 'curvedCW', roundness: 0.2 },
+                color: { color: '#848484', highlight: '#2B7CE9', hover: '#2B7CE9' },
+                hoverWidth: 1.5
+            },
+            interaction: {
+                hover: true // 必須開啟 hover 才能觸發 edge.hover 狀態
+            },
+            physics: {
+                enabled: true,
+                barnesHut: { gravitationalConstant: -3000 }
+            }
+        };
+
+        const network = new vis.Network(container, { nodes, edges }, options);
+
+        // 3. 整合繪製邏輯 (多標籤 + 懸停置頂)
+        network.on("afterDrawing", (ctx) => {
+            const allEdges = network.body.edges;
+            const edgeIds = edges.getIds();
+
+            edgeIds.forEach(id => {
+                const edge = allEdges[id];
+                const rawData = edges.get(id);
+
+                if (!edge) return;
+
+                // --- 處理 labelFrom / labelTo ---
+                if (rawData && (rawData.labelFrom || rawData.labelTo)) {
+                    const font = edge.options.font;
+                    const viaNode = edge.edgeType.getViaNode();
+
+                    ctx.save();
+                    ctx.font = `${edge.selected ? 'bold' : ''} ${font.size}px ${font.face}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    if (rawData.labelFrom) renderLabel(ctx, edge, rawData.labelFrom, 0.15, viaNode);
+                    if (rawData.labelTo) renderLabel(ctx, edge, rawData.labelTo, 0.85, viaNode);
+
+                    ctx.restore();
+                }
+
+                // --- 處理 Hover 置頂 ---
+                if (edge.hover) {
+                    const viaNode = edge.edgeType.getViaNode();
+                    edge.drawLabel(ctx, viaNode);
+                }
+            });
+        });
+
+        // 4. 底層渲染函式
+        function renderLabel(ctx, edge, text, percentage, viaNode) {
+            let pt;
+            if (edge.fromId === edge.toId) { // 自環處理
+                const radius = edge.options.selfReference.size;
+                const angle = percentage * 2 * Math.PI;
+                pt = {
+                    x: edge.from.x + radius + radius * Math.cos(angle),
+                    y: edge.from.y - radius - radius * Math.sin(angle)
+                };
+            } else {
+                pt = edge.edgeType.getPoint(percentage, viaNode);
+            }
+
+            const dy = edge.from.y - edge.to.y;
+            const dx = edge.from.x - edge.to.x;
+            let angle = Math.atan2(dy, dx);
+            if ((angle < -Math.PI / 2) || (angle > Math.PI / 2)) angle += Math.PI;
+
+            ctx.save();
+            ctx.translate(pt.x, pt.y);
+            if (edge.options.font.align !== 'horizontal') ctx.rotate(angle);
+
+            // 繪製背景
+            const padding = 3;
+            const w = ctx.measureText(text).width;
+            const h = 12; // 概估高度
+            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+
+            // 繪製圓角矩形背景 (輔助函式)
+            drawRoundedRect(ctx, -w / 2 - padding, -h / 2 - 2, w + padding * 2, h + 4, 4);
+            ctx.fill();
+
+            // 繪製文字
+            ctx.fillStyle = edge.selected ? '#2B7CE9' : '#34495e';
+            ctx.fillText(text, 0, 0);
+            ctx.restore();
+        }
+
+        function drawRoundedRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+    </script>
+</body>
+
+</html>
