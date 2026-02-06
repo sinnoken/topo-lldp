@@ -2,7 +2,7 @@
     "name": "network-toolbox",
     "version": "1.0.0",
     "scripts": {
-        "build": "npm install -D tailwindcss && npx tailwindcss -i ./css/input.css -o ./css/output.css --minify"
+        "build": "npx tailwindcss -i ./css/input.css -o ./css/output.css --minify"
     },
     "devDependencies": {
         "tailwindcss": "^3.4.0"
