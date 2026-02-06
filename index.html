@@ -1,270 +1,90 @@
-<!-- 扮演品質檢查員 檢查是否存在
-1.使用者體驗
-2.輸入資料驗證
-3.程式碼效能、命名規範
-4.開源授權合規
-5.連結有效性
-並給予建議 -->
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="light">
+<html lang="zh-TW">
 
 <head>
-  <meta charset="UTF-8">
-  <title>LLDP Topology viewer</title>
-  <link rel="stylesheet" href="css/daisyui.4.4.19.full.min.css" />
-  <link rel="stylesheet" href="css/vis.css">
-  <script src="js/font-awesome.6.4.0.all.min.js"></script>
-  <script src="js/tailwindcss.3.4.17.js"></script>
-  <script src="js/vis.min.js"></script>
-  <!-- <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script> -->
-  <script src="js/topo-lldp.js"></script>
-  <style>
-    /* 基礎設定 */
-    #mynetwork {
-      width: 100%;
-      height: 100%;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Toolbox | Cloudflare Pages</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <style>
+        body {
+            font-family: 'Google Sans', sans-serif;
+            background-color: #f8f9fa;
+        }
 
-    /* 編輯器捲軸與文字格式 */
-    #data-editor {
-      white-space: pre;
-      overflow-x: auto;
-      tab-size: 2;
-      word-break: keep-all;
-    }
+        .tool-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-    /* 讓側邊欄可以左右拉伸 */
-    .resizable-side {
-      width: 550px;
-      min-width: 350px;
-      max-width: 85vw;
-      resize: horizontal;
-      overflow: hidden;
-      direction: rtl;
-      /* 讓拉伸點出現在左側 */
-      border-left: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .resizable-side>* {
-      direction: ltr;
-      /* 恢復內容方向 */
-    }
-
-    /* 讓拉伸桿稍微明顯一點 */
-    .resizable-side::-webkit-resizer {
-      background-color: #cbd5e1;
-    }
-
-    .legend-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-      font-size: 13px;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-    }
-
-    .legend-row i {
-      width: 20px;
-      margin-right: 8px;
-      text-align: center;
-    }
-
-    .edge-line {
-      display: inline-block;
-      width: 20px;
-      margin-right: 8px;
-      vertical-align: middle;
-      border-radius: 2px;
-    }
-  </style>
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 
-<body onload="initApp()" class="h-screen overflow-hidden">
-  <div class="drawer drawer-end h-full">
-    <input id="my-drawer" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col h-full relative">
-      <header class="navbar bg-transparent px-4 z-20 absolute top-0 left-0 right-0">
-        <div class="flex-1">
-          <h1 class="text-xl font-bold text-primary flex items-center gap-2 bg-base-100 px-3 py-2 rounded-lg shadow-sm">
-            <i class="fa-solid fa-diagram-project"></i> LLDP Topology viewer
-          </h1>
+<body class="min-h-screen flex flex-col">
+
+    <nav class="bg-white border-b border-gray-200 px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-600 text-3xl">settings_ethernet</span>
+            <span class="text-xl font-bold text-gray-800">Network <span class="text-blue-600">Toolbox</span></span>
         </div>
+        <div class="text-sm text-gray-500 font-medium">Infrastructure Analysis Suite</div>
+    </nav>
 
-        <div class="flex-none gap-3 items-center">
-          <div id="search-feedback" class="badge badge-sm opacity-0 transition-opacity"></div>
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1 items-center">
-              <input id="search-node-input" type="text" list="node-suggestions"
-                oninput="updateSuggestions(this.value, event)" onkeydown="if(event.key === 'Enter') searchNodeById()"
-                placeholder="輸入 Node ID..." class="input input-sm font-mono w-32" autocomplete="off"
-                spellcheck="false" />
-              <datalist id="node-suggestions"></datalist>
-              <button onclick="searchNodeById()" class="btn btn-primary btn-sm btn-square">
-                <i class="fa-solid fa-search"></i></button>
-              <input id="search-vlan-input" type="number" placeholder="搜尋 VLAN ID (例如: 244)"
-                class="input input-sm font-mono w-32" autocomplete="off" spellcheck="false" />
-              <button onclick="searchVlan()" class="btn btn-primary btn-sm btn-square">
-                <i class="fa-solid fa-search"></i></button>
+    <main class="flex-grow container mx-auto px-6 py-12">
+        <div class="max-w-4xl mx-auto">
+            <header class="mb-12 text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">網路管理工具箱</h1>
+                <p class="text-gray-600 text-lg">整合路由分析、LLDP 拓樸與 VLAN 稽核的自動化平台</p>
+            </header>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <a href="route.html"
+                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-blue-400">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-2xl">account_tree</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">Network Analyzer</h2>
+                    <p class="text-gray-500 text-sm mb-4">追蹤與模擬網路路徑決策，視覺化呈現跳點與路由表。</p>
+                    <span class="text-blue-600 text-sm font-bold flex items-center gap-1">開啟工具 <span
+                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                </a>
+
+                <a href="topo-lldp.html"
+                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-purple-400">
+                    <div
+                        class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-2xl">hub</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">LLDP Topology</h2>
+                    <p class="text-gray-500 text-sm mb-4">將 Raw LLDP 資料轉換為動態拓樸圖，支援物理引擎佈局。</p>
+                    <span class="text-purple-600 text-sm font-bold flex items-center gap-1">開啟工具 <span
+                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                </a>
+
+                <a href="vlan.html"
+                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-green-400">
+                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-2xl">fact_check</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">VLAN Auditor</h2>
+                    <p class="text-gray-500 text-sm mb-4">Juniper 設備稽核系統，分析 MAC 學習狀態與 VLAN 匹配。</p>
+                    <span class="text-green-600 text-sm font-bold flex items-center gap-1">開啟工具 <span
+                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                </a>
             </div>
-          </div>
-          <div class="flex items-center gap-2 ml-2">
-            <span class="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded-md whitespace-nowrap">
-              選取深度
-            </span>
-            <input id="layer-slider" type="range" min="1" max="20" value="1" class="range range-xs range-primary w-24"
-              step="1" oninput="document.getElementById('layer-value').innerText = this.value" />
-            <span id="layer-value" class="badge badge-primary badge-sm font-mono w-6">1</span>
-          </div>
-
-          <div class="flex gap-2 ml-2">
-            <button id="layout-toggle-btn" onclick="toggleLayoutMode()" class="btn btn-secondary btn-sm">
-              佈局: 物理引擎
-            </button>
-            <button onclick="saveNodePositions()" class="btn btn-primary btn-sm">儲存佈局</button>
-            <button onclick="document.getElementById('usage_modal').showModal()" class="btn btn-info btn-sm btn-square"
-              title="使用說明">
-              <i class="fa-solid fa-circle-info text-lg"></i>
-            </button>
-            <button onclick="exportToPNG()" class="btn btn-info btn-sm btn-square" title="儲存圖片">
-              <i class="fa-solid fa-floppy-disk"></i>
-            </button>
-            <button onclick="clearLocalStorage()" class="btn btn-error btn-sm btn-square" title="清除所有資料">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-            <label for="my-drawer" class="btn btn-primary btn-sm btn-square">☰</label>
-          </div>
         </div>
-      </header>
-      <main class="relative flex-grow overflow-hidden">
-        <div id="mynetwork" class="w-full h-full"></div>
-        <div class="absolute bottom-4 left-4 pointer-events-none flex gap-2">
-          <kbd class="kbd kbd-sm">拖拽調整</kbd>
-          <kbd class="kbd kbd-sm">CTRL多選</kbd>
-          <kbd class="kbd kbd-sm">雙擊選取鄰居</kbd>
-          <kbd class="kbd kbd-sm border-dashed opacity-70">
-            <i class="fa-solid fa-scale-balanced mr-1 text-[10px]"></i> MIT License
-          </kbd>
-        </div>
-      </main>
-    </div>
+    </main>
 
-    <div class="drawer-side lg:drawer-open drawer-end z-30">
-      <label for="my-drawer" class="drawer-overlay"></label>
-      <div
-        class="resizable-side min-h-full w-72 bg-base-100 flex flex-col p-4 gap-4 shadow-2xl border-l border-base-200">
+    <footer class="py-8 text-center text-gray-400 text-xs">
+        &copy; 2026 Network Admin Suite. Deployed via Cloudflare Pages.
+    </footer>
 
-        <div class="flex-grow flex flex-col min-h-0 gap-2">
-          <div class="flex justify-between items-center">
-            <span class="text-[10px] font-mono opacity-50 uppercase tracking-tighter">Raw LLDP / JSON</span>
-            <div class="flex gap-1">
-              <button onclick="toggleFormat()"
-                class="btn btn-xs btn-outline btn-secondary px-1 min-h-0 h-6">格式化</button>
-            </div>
-          </div>
-          <textarea id="raw-data-editor" placeholder="在此貼上 LLDP Raw Text..."
-            class="textarea textarea-bordered font-mono text-[10px] w-full h-1/3 flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
-            spellcheck="false"></textarea>
-          <textarea id="data-editor" placeholder="Nodes & Edges JSON"
-            class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2"
-            spellcheck="false"></textarea>
-          <textarea id="additional-data-editor" placeholder="貼上額外JSON資料..."
-            class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
-            spellcheck="false"></textarea>
-          <textarea id="vlan-editor" placeholder="貼上額外vlan資料..."
-            class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
-            spellcheck="false"></textarea>
-          <textarea id="vlan-viewer" placeholder="vlan資料"
-            class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
-            spellcheck="false"></textarea>
-        </div>
-      </div>
-    </div>
-  </div>
-  <dialog id="usage_modal" class="modal">
-    <div class="modal-box w-11/12 max-w-3xl max-h-[85vh] overflow-y-auto border border-primary/20">
-      <h3 class="font-bold text-xl border-b pb-3 mb-6 flex items-center gap-2 text-primary">
-        <i class="fa-solid fa-circle-info"></i> LLDP Topology Viewer 使用指南
-      </h3>
-
-      <div class="space-y-6">
-        <section>
-          <div class="flex items-center gap-2 mb-2">
-            <div class="badge badge-primary badge-md">1</div>
-            <h4 class="font-bold text-lg text-secondary">運作方式 (How it works)</h4>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 ml-2">
-            <div class="bg-base-200 p-3 rounded-lg">
-              <p class="font-bold text-xs mb-2 opacity-70 uppercase tracking-widest"><i
-                  class="fa-solid fa-microchip mr-1"></i> 數據解析 (Parsing)</p>
-              <ul class="text-xs space-y-1">
-                <li>• <strong>LLDP 自動轉換：</strong>內建 <code>convertLldpToJson</code> 解析原始文字，提取介面與對端設備。</li>
-                <li>• <strong>正則分類：</strong>利用 <code>GROUP_RULES</code> 自動將設備歸類為防火牆 (FGT) 或交換器。</li>
-              </ul>
-            </div>
-            <div class="bg-base-200 p-3 rounded-lg">
-              <p class="font-bold text-xs mb-2 opacity-70 uppercase tracking-widest"><i
-                  class="fa-solid fa-wand-magic-sparkles mr-1"></i> 視覺渲染 (Rendering)</p>
-              <ul class="text-xs space-y-1">
-                <li>• <strong>物理引擎：</strong>ForceAtlas2 模擬排斥力，自動撐開節點防止重疊。</li>
-                <li>• <strong>樣式定義：</strong>依據連線類型 (10G/VLAN/OOB) 自動賦予顏色與線寬。</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <div class="flex items-center gap-2 mb-3">
-            <div class="badge badge-primary badge-md">2</div>
-            <h4 class="font-bold text-lg text-secondary">使用案例 (Use Cases)</h4>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-2 text-xs">
-            <div class="border border-base-300 p-3 rounded-lg">
-              <p class="font-bold text-primary mb-1"><i class="fa-solid fa-bolt mr-1"></i> 快速生成架構圖</p>
-              <p class="opacity-80">貼上 <code>show lldp neighbors</code> 指令結果，省去 Visio 手動拉線時間。</p>
-            </div>
-            <div class="border border-base-300 p-3 rounded-lg">
-              <p class="font-bold text-primary mb-1"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> 故障與影響評估</p>
-              <p class="opacity-80">搜尋設備並搭配「雙擊選取深度」，快速查看受影響的所有下游節點。</p>
-            </div>
-            <div class="border border-base-300 p-3 rounded-lg">
-              <p class="font-bold text-primary mb-1"><i class="fa-solid fa-palette mr-1"></i> 機房設備盤點</p>
-              <p class="opacity-80">利用顏色區分高速鏈路 (10G/100G) 與一般鏈路 (1G)。</p>
-            </div>
-            <div class="border border-base-300 p-3 rounded-lg">
-              <p class="font-bold text-primary mb-1"><i class="fa-solid fa-server mr-1"></i> 端到端視覺化</p>
-              <p class="opacity-80">整合 Server 與 Windows 命名規則，建立網路設備到終端的完整圖譜。</p>
-            </div>
-          </div>
-        </section>
-
-        <div class="alert alert-info shadow-sm py-3 bg-info/10 border-info/20 text-xs">
-          <div>
-            <h5 class="font-bold flex items-center gap-2">💡 第一次使用的建議</h5>
-            <div class="grid grid-cols-2 gap-x-4 mt-2">
-              <p>• <strong>嘗試拖拽：</strong>手動調整位置後會自動儲存。</p>
-              <p>• <strong>狀態持久化：</strong>排版位置會儲存 8 小時。</p>
-              <p>• <strong>切換佈局：</strong>太亂時點擊「動態物理」自動排開。</p>
-              <p>• <strong>快捷多選：</strong>按住 CTRL 可同時選取多個節點。</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-action border-t pt-4">
-        <form method="dialog" class="flex w-full justify-between items-center">
-          <div class="flex flex-col">
-            <span class="text-[10px] opacity-40 uppercase tracking-tighter mt-1">
-              Powered by vis.js, TailwindCSS & DaisyUI (MIT License)
-            </span>
-          </div>
-          <button class="btn btn-primary btn-sm px-8">開始體驗</button>
-        </form>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop bg-slate-900/60 backdrop-blur-sm">
-      <button>close</button>
-    </form>
-  </dialog>
 </body>
 
 </html>
