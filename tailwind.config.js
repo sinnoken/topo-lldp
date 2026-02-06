@@ -13,5 +13,8 @@ module.exports = {
             },
         },
     },
-    plugins: [],
+    plugins: [require("daisyui")],
+    daisyui: {
+        themes: ["light"], // 這裡越少，檔案越小
+    },
 }
