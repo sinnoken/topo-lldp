@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -10,100 +10,125 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-
     <style>
         body {
             font-family: 'Google Sans', system-ui, sans-serif;
-            background-color: #f8f9fa;
         }
 
-        .tool-card {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
-        }
-
+        /* 自定義微調，補充 daisyUI 以外的動畫 */
         .tool-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .tool-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-8px);
         }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col bg-base-200">
 
-    <nav class="bg-white border-b border-gray-200 px-8 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-blue-600 text-3xl">settings_ethernet</span>
-            <span class="text-xl font-bold text-gray-800">Network <span class="text-blue-600">Toolbox</span></span>
+    <nav class="navbar bg-base-100 shadow-sm px-6 h-16 mb-2">
+        <div class="flex-1 items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-3xl">settings_ethernet</span>
+            <span class="text-xl font-bold text-base-content">Network <span class="text-primary">Toolbox</span></span>
         </div>
-        <div class="text-sm text-gray-500 font-medium">Infrastructure Analysis Suite</div>
+        <div class="flex-none">
+            <span class="badge badge-ghost font-medium">Infrastructure Analysis Suite</span>
+        </div>
     </nav>
 
     <main class="flex-grow container mx-auto px-6 py-12">
-        <div class="max-w-4xl mx-auto">
-            <header class="mb-12 text-center">
-                <h1 class="text-4xl font-bold text-gray-900 mb-4">Network Admin Toolkit</h1>
-                <p class="text-gray-600 text-lg">Automated platform for Route Analysis, LLDP Topology, and VLAN Auditing
+        <div class="max-w-5xl mx-auto">
+            <header class="mb-16 text-center">
+                <h1 class="text-5xl font-extrabold text-base-content mb-4 tracking-tight">Network Admin Toolkit</h1>
+                <p class="text-base-content/70 text-lg max-w-2xl mx-auto">Automated platform for Route Analysis, LLDP
+                    Topology, and VLAN Auditing
                 </p>
             </header>
 
-            <div class="grid md:grid-cols-3 gap-6">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+
                 <a href="route.html"
-                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-blue-400">
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
-                        <span class="material-symbols-outlined text-2xl">account_tree</span>
+                    class="tool-card card bg-base-100 shadow-xl border border-base-300 hover:border-primary group">
+                    <div class="card-body p-8">
+                        <div
+                            class="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-3xl">account_tree</span>
+                        </div>
+                        <h2 class="card-title text-xl font-bold">Network Analyzer</h2>
+                        <p class="text-base-content/60 text-sm leading-relaxed">Trace and simulate routing decisions
+                            with visual hop tracking and routing table mapping.</p>
+                        <div class="card-actions justify-end mt-6">
+                            <div class="btn btn-primary btn-sm btn-ghost group-hover:btn-active">
+                                Launch Tool <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">Network Analyzer</h2>
-                    <p class="text-gray-500 text-sm mb-4">Trace and simulate routing decisions with visual hop tracking
-                        and routing table mapping.</p>
-                    <span class="text-blue-600 text-sm font-bold flex items-center gap-1">Launch Tool <span
-                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
                 </a>
 
                 <a href="topo-lldp.html"
-                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-purple-400">
-                    <div
-                        class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4">
-                        <span class="material-symbols-outlined text-2xl">hub</span>
+                    class="tool-card card bg-base-100 shadow-xl border border-base-300 hover:border-secondary group">
+                    <div class="card-body p-8">
+                        <div
+                            class="w-14 h-14 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mb-4 group-hover:bg-secondary group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-3xl">hub</span>
+                        </div>
+                        <h2 class="card-title text-xl font-bold">LLDP Topology</h2>
+                        <p class="text-base-content/60 text-sm leading-relaxed">Convert raw LLDP data into dynamic
+                            topology maps with physics-based layout support.</p>
+                        <div class="card-actions justify-end mt-6">
+                            <div class="btn btn-secondary btn-sm btn-ghost group-hover:btn-active">
+                                Launch Tool <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">LLDP Topology</h2>
-                    <p class="text-gray-500 text-sm mb-4">Convert raw LLDP data into dynamic topology maps with
-                        physics-based layout support.</p>
-                    <span class="text-purple-600 text-sm font-bold flex items-center gap-1">Launch Tool <span
-                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
                 </a>
 
                 <a href="vlan.html"
-                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-green-400">
-                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-4">
-                        <span class="material-symbols-outlined text-2xl">fact_check</span>
+                    class="tool-card card bg-base-100 shadow-xl border border-base-300 hover:border-success group">
+                    <div class="card-body p-8">
+                        <div
+                            class="w-14 h-14 bg-success/10 text-success rounded-2xl flex items-center justify-center mb-4 group-hover:bg-success group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-3xl">fact_check</span>
+                        </div>
+                        <h2 class="card-title text-xl font-bold">VLAN Auditor</h2>
+                        <p class="text-base-content/60 text-sm leading-relaxed">Audit system for Juniper devices.
+                            Analyze MAC learning states and VLAN consistency.</p>
+                        <div class="card-actions justify-end mt-6">
+                            <div class="btn btn-success btn-sm btn-ghost group-hover:btn-active text-white">
+                                Launch Tool <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">VLAN Auditor</h2>
-                    <p class="text-gray-500 text-sm mb-4">Audit system for Juniper devices. Analyze MAC learning states
-                        and VLAN consistency.</p>
-                    <span class="text-green-600 text-sm font-bold flex items-center gap-1">Launch Tool <span
-                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
                 </a>
+
                 <a href="arp.html"
-                    class="tool-card bg-white p-6 rounded-2xl border border-gray-200 hover:border-amber-400">
-                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4">
-                        <span class="material-symbols-outlined text-2xl">dataset</span>
+                    class="tool-card card bg-base-100 shadow-xl border border-base-300 hover:border-warning group">
+                    <div class="card-body p-8">
+                        <div
+                            class="w-14 h-14 bg-warning/10 text-warning rounded-2xl flex items-center justify-center mb-4 group-hover:bg-warning group-hover:text-white transition-colors">
+                            <span class="material-symbols-outlined text-3xl">dataset</span>
+                        </div>
+                        <h2 class="card-title text-xl font-bold">ARP Mapper</h2>
+                        <p class="text-base-content/60 text-sm leading-relaxed">Standardize raw ARP data into structured
+                            JSON maps. Supports multi-device block parsing.</p>
+                        <div class="card-actions justify-end mt-6">
+                            <div class="btn btn-warning btn-sm btn-ghost group-hover:btn-active text-warning-content">
+                                Launch Tool <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">ARP Map Mapper</h2>
-                    <p class="text-gray-500 text-sm mb-4">Standardize raw ARP data into structured JSON maps. Supports
-                        multi-device block parsing and noise filtering.</p>
-                    <span class="text-amber-600 text-sm font-bold flex items-center gap-1">Launch Tool <span
-                            class="material-symbols-outlined text-sm">arrow_forward</span></span>
                 </a>
+
             </div>
         </div>
     </main>
 
-    <footer class="py-8 text-center text-gray-400 text-xs">
-        &copy; 2026 Network Admin Suite. Deployed via Cloudflare Pages.
+    <footer class="footer footer-center p-10 bg-base-100 text-base-content/50 border-t border-base-300">
+        <div>
+            <p>&copy; 2026 Network Admin Suite. Deployed via <span class="font-semibold">Cloudflare Pages</span>.</p>
+        </div>
     </footer>
 
 </body>
