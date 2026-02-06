@@ -1,6 +1,6 @@
 # LLDP Topology Viewer User Manual
 
-> **Languages: [English] | [繁體中文](README.zh-TW.md)**
+> **Languages: [English] | [繁體中文](readme.zh-TW.md)**
 
 Developed using **Vis.js**, this tool transforms complex network connection data (LLDP/OSPF) into intuitive, interactive 2D/3D topology maps.
 
