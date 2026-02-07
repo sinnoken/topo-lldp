@@ -246,6 +246,12 @@
         const viewer = document.getElementById('vlan-viewer');
 
         async function init() {
+            // 增加檢查：確保 VlanAuditor 已經定義
+            if (typeof VlanAuditor === 'undefined') {
+                console.warn("VlanAuditor not ready, retrying in 100ms...");
+                setTimeout(init, 100);
+                return;
+            }
             // 1. 立即綁定所有編輯器的事件 (這讓使用者一打開網頁就能貼上資料)
             setupEventListeners();
 
