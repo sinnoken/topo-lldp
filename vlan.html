@@ -1,620 +1,377 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
-    <title>Network Topology & AE Auditor</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLAN Auditor | Network Toolbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+
     <style>
-        :root {
-            --primary: #28a745;
-            --dark: #343a40;
-            --bg: #f0f2f5;
-        }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            background: var(--bg);
+            font-family: 'Google Sans', system-ui, sans-serif;
+            overflow: hidden;
         }
 
-        .toolbar {
-            background: var(--dark);
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .code-font {
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.4;
         }
 
-        .main-container {
-            display: flex;
-            flex: 1;
-            gap: 10px;
-            padding: 10px;
-            overflow-x: auto;
+        .workspace-height {
+            height: calc(100vh - 4rem - 3rem - 2rem);
         }
 
-        .column {
-            min-width: 320px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        /* 讓內容更新時的動畫更平滑 */
+        .status-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .half-panel {
-            min-width: 320px;
-            flex: 0 0 auto;
-            /* 避免在 flex 容器中被拉伸成全高 */
-            height: 50vh;
-            /* 關鍵：設定為螢幕可視高度的一半 */
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            overflow-y: auto;
-            /* 內容過長時出現垂直捲軸 */
+        @keyframes pulse-green {
+            0% {
+                border-color: rgb(209 213 219);
+            }
+
+            /* base-300 */
+            50% {
+                border-color: #22c55e;
+                shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+            }
+
+            /* success */
+            100% {
+                border-color: #22c55e;
+            }
         }
 
-        .header {
-            padding: 8px 12px;
-            background: #eee;
-            font-weight: bold;
-            font-size: 0.85rem;
-            border-radius: 8px 8px 0 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        textarea {
-            flex: 1;
-            border: none;
-            padding: 10px;
-            font-family: 'Cascadia Code', monospace;
-            font-size: 11px;
-            resize: none;
-            outline: none;
-        }
-
-        #vlan-viewer {
-            flex: 1;
-            padding: 10px;
-            overflow: auto;
-            font-size: 11px;
-            white-space: pre;
-            margin: 0;
-            border-radius: 0 0 8px 8px;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            cursor: pointer;
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 6px 15px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        button.json {
-            background: #007bff;
-        }
-
-        small {
-            display: block;
-            font-size: 10px;
+        .animate-update {
+            animation: pulse-green 0.8s ease-out;
+            border-color: #22c55e !important;
         }
     </style>
 </head>
 
-<body>
+<body class="h-screen bg-base-200 flex flex-col">
 
-    <div class="toolbar">
-        <h2>Juniper Network Audit System</h2>
-        <div class="btn-group">
-            <button class="json" onclick="downloadJSON()">下載稽核 JSON</button>
-            <button onclick="downloadCSV()">下載稽核 CSV</button>
+    <nav class="navbar bg-base-100 shadow-sm px-6 h-16 flex-none">
+        <div class="flex-1 gap-2">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span class="material-symbols-outlined text-success text-3xl font-bold">fact_check</span>
+                <span class="text-xl font-bold tracking-tight">VLAN <span class="text-success">Auditor</span></span>
+            </a>
         </div>
-    </div>
+        <div class="flex-none gap-3">
+            <div class="join">
+                <button class="btn btn-sm btn-outline btn-success join-item" onclick="handleDownloadJSON()">
+                    <span class="material-symbols-outlined text-sm">download</span> JSON
+                </button>
+                <button class="btn btn-sm btn-outline btn-success join-item" onclick="handleDownloadExcel()">
+                    <span class="material-symbols-outlined text-sm">table_chart</span> Excel
+                </button>
+                <button class="btn btn-sm btn-success join-item" onclick="handleDownloadCSV()">
+                    <span class="material-symbols-outlined text-sm">description</span> 下載稽核 CSV
+                </button>
+            </div>
+        </div>
+    </nav>
 
-    <div class="main-container">
-        <div class="column">
-            <div class="header">1. Config <small>VLANs & AE Members</small></div>
-            <textarea id="config-editor" placeholder="貼上 set vlans... 與 set interfaces..."></textarea>
-        </div>
-        <div class="column">
-            <div class="header">2. show vlan <small>Status</small></div>
-            <textarea id="vlan-editor" placeholder="貼上 show vlan..."></textarea>
-        </div>
-        <div class="column">
-            <div class="header">2. Switch Table <small>MAC Learning Status</small></div>
-            <textarea id="switch-editor" placeholder="貼上 show ethernet-switching table..."></textarea>
-        </div>
+    <main class="flex-grow p-4 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 h-full">
 
-        <div class="column">
-            <div class="header">3. Topology JSON <small>Nodes & Edges Data</small></div>
-            <textarea id="topo-editor"
-                placeholder='{"edges": [{"from": "A", "to": "B", "labelTo": "ge-0/0/1"}]}'></textarea>
-        </div>
+            <div
+                class="lg:col-span-4 card bg-base-100 shadow-sm border border-base-300 flex flex-col min-h-[300px] overflow-hidden">
+                <div class="px-4 py-3 bg-base-200 border-b border-base-300 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">settings</span> 1. Config
+                    </h3>
+                </div>
+                <div class="indicator w-full h-full p-4 flex flex-col overflow-hidden">
+                    <span id="badge-config"
+                        class="indicator-item badge badge-success scale-0 opacity-0 status-transition font-bold text-[10px] mt-8 mr-8 shadow-md">✓
+                        UPDATED</span>
+                    <textarea id="config-editor"
+                        class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
+                        placeholder="Paste 'show configuration' here..."></textarea>
+                    <div
+                        class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
+                        <span id="stats-config">Empty</span>
+                        <button onclick="clearEditor('config-editor')"
+                            class="hover:text-error transition-colors">Clear</button>
+                    </div>
+                </div>
+            </div>
 
-        <div class="column">
-            <div class="header">4. Audit Result <small>Merged Logic</small></div>
-            <textarea id="vlan-viewer"></textarea>
-        </div>
-    </div>
+            <div
+                class="lg:col-span-4 card bg-base-100 shadow-sm border border-base-300 flex flex-col min-h-[300px] overflow-hidden">
+                <div class="px-4 py-3 bg-base-200 border-b border-base-300 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">visibility</span> 2. show vlan
+                    </h3>
+                </div>
+                <div class="indicator w-full h-full p-4 flex flex-col overflow-hidden">
+                    <span id="badge-vlan"
+                        class="indicator-item badge badge-success scale-0 opacity-0 status-transition font-bold text-[10px] mt-8 mr-8 shadow-md">✓
+                        UPDATED</span>
+                    <textarea id="vlan-editor"
+                        class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
+                        placeholder="貼上 show vlan..."></textarea>
+                    <div
+                        class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
+                        <span id="stats-vlan">Empty</span>
+                        <button onclick="clearEditor('vlan-editor')"
+                            class="hover:text-error transition-colors">Clear</button>
+                    </div>
+                </div>
+            </div>
 
+            <div
+                class="lg:col-span-4 card bg-base-100 shadow-sm border border-base-300 flex flex-col min-h-[300px] overflow-hidden">
+                <div class="px-4 py-3 bg-base-200 border-b border-base-300 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">list_alt</span> 3. Mac Table
+                    </h3>
+                </div>
+                <div class="indicator w-full h-full p-4 flex flex-col overflow-hidden">
+                    <span id="badge-switch"
+                        class="indicator-item badge badge-success scale-0 opacity-0 status-transition font-bold text-[10px] mt-8 mr-8 shadow-md">✓
+                        UPDATED</span>
+                    <textarea id="switch-editor"
+                        class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
+                        placeholder="貼上 show ethernet-switching table..."></textarea>
+                    <div
+                        class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
+                        <span id="stats-switch">Empty</span>
+                        <button onclick="clearEditor('switch-editor')"
+                            class="hover:text-error transition-colors">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="lg:col-span-4 card bg-base-100 shadow-sm border border-base-300 flex flex-col min-h-[300px] overflow-hidden">
+                <div class="px-4 py-3 bg-base-200 border-b border-base-300 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">hub</span> 4. Topology
+                    </h3>
+                </div>
+                <div class="indicator w-full h-full p-4 flex flex-col overflow-hidden">
+                    <span id="badge-topo"
+                        class="indicator-item badge badge-success scale-0 opacity-0 status-transition font-bold text-[10px] mt-8 mr-8 shadow-md">✓
+                        UPDATED</span>
+                    <textarea id="topo-editor"
+                        class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
+                        placeholder='{"edges": []}'></textarea>
+                    <div
+                        class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
+                        <span id="stats-topo">Empty</span>
+                        <button onclick="clearEditor('topo-editor')"
+                            class="hover:text-error transition-colors">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="lg:col-span-4 card bg-base-100 shadow-sm border border-base-300 flex flex-col min-h-[300px] overflow-hidden">
+                <div class="px-4 py-3 bg-base-200 border-b border-base-300 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">router</span> 5. ARP Table
+                    </h3>
+                </div>
+                <div class="indicator w-full h-full p-4 flex flex-col overflow-hidden">
+                    <span id="badge-arp"
+                        class="indicator-item badge badge-success scale-0 opacity-0 status-transition font-bold text-[10px] mt-8 mr-8 shadow-md">✓
+                        UPDATED</span>
+                    <textarea id="arp-editor"
+                        class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
+                        placeholder="貼上 show arp..."></textarea>
+                    <div
+                        class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
+                        <span id="stats-arp">Empty</span>
+                        <button onclick="clearEditor('arp-editor')"
+                            class="hover:text-error transition-colors">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="card-result"
+                class="lg:col-span-4 card bg-base-100 shadow-sm border-2 border-base-300 flex flex-col min-h-[300px] overflow-hidden status-transition">
+                <div
+                    class="px-4 py-3 bg-base-200 text-base-content flex items-center justify-between border-b border-base-300">
+                    <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">analytics</span> 6. Result
+                    </h3>
+                    <span id="badge-result"
+                        class="badge badge-primary scale-0 opacity-0 status-transition font-bold text-[10px]">READY</span>
+                </div>
+                <div class="indicator w-full h-full flex flex-col overflow-hidden">
+                    <textarea id="vlan-viewer" readonly
+                        class="textarea textarea-ghost flex-grow p-4 code-font bg-base-50/50 resize-none font-medium transition-colors duration-500"
+                        placeholder="解析結果將自動生成於此..."></textarea>
+                    <div
+                        class="flex justify-end items-center p-2 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter bg-base-200/50">
+                        <span id="stats-result">No Data</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="footer footer-center p-3 bg-base-100 text-base-content/50 border-t border-base-300 flex-none">
+        <div>
+            <p class="text-[10px] uppercase tracking-widest font-bold">Juniper Network Auditor v2.0 | Reactive UI Ready
+            </p>
+        </div>
+    </footer>
+
+    <script src="js/vlan.js"></script>
     <script>
-        const configEditor = document.getElementById('config-editor');
-        const switchEditor = document.getElementById('switch-editor');
-        const vlanEditor = document.getElementById('vlan-editor');
-        const topoEditor = document.getElementById('topo-editor');
+        const auditor = new VlanAuditor();
+        const editorConfigs = [
+            { id: 'config-editor', prefix: 'config' },
+            { id: 'vlan-editor', prefix: 'vlan' },
+            { id: 'switch-editor', prefix: 'switch' },
+            { id: 'topo-editor', prefix: 'topo' },
+            { id: 'arp-editor', prefix: 'arp' } // 新增這行
+        ];
         const viewer = document.getElementById('vlan-viewer');
 
-        // 擴充後的 OUI Map，對齊你的 aa:bb:cc 小寫格式
-        // 1. 全域變數存儲資料
-        let globalOuiData = null;
+        async function init() {
+            await auditor.initOuiDatabase();
 
-        // 2. 非同步載入 OUI 資料庫
-        async function initOuiDatabase() {
-            try {
-                const response = await fetch('https://cdn.jsdelivr.net/gh/silverwind/oui-data@master/index.json');
-                globalOuiData = await response.json();
-                console.log("OUI 資料庫動態載入成功！數量：", Object.keys(globalOuiData).length);
-            } catch (error) {
-                console.error("OUI 載入失敗，切換至備用簡易名單", error);
-                // 備用的小型名單，預防斷網
-                globalOuiData = { "005056": "VMware", "00155D": "Hyper-V", "0010DB": "Juniper" };
-            }
-        }
+            editorConfigs.forEach(conf => {
+                const el = document.getElementById(conf.id);
+                const badge = document.getElementById(`badge-${conf.prefix}`);
+                const stats = document.getElementById(`stats-${conf.prefix}`);
 
-        function getVendor(mac) {
-            if (!mac || !globalOuiData) return "Unknown";
+                el.addEventListener('input', () => {
+                    // 1. 更新 UI 狀態
+                    const val = el.value.trim();
+                    // 如果是 ARP 編輯器，先解析 JSON
+                    if (conf.id === 'arp-editor') {
+                        auditor.parseArpData(val);
+                    }
+                    const hasContent = val.length > 0;
 
-            // 將 mac 轉換為大寫且去除冒號，取前 6 碼 (例如: 005056)
-            const ouiKey = mac.replace(/[:.-]/g, "").toUpperCase().substring(0, 6);
+                    if (hasContent) {
+                        el.classList.add('textarea-success', 'bg-success/5');
+                        badge.classList.remove('scale-0', 'opacity-0');
+                        badge.classList.add('scale-100', 'opacity-100');
 
-            return globalOuiData[ouiKey] || "Unknown Vendor";
-        }
-
-        let networkData = { nodes: [], edges: [] };
-
-        function process() {
-            const configText = configEditor.value;
-            const nodes = [];
-            const sections = configText.split(/_{5,}/);
-
-            // --- 第一階段：初始化 Node 與解析基礎配置 (Interface Map) ---
-            sections.forEach(section => {
-                const nodeMatch = section.match(/^\s*(?<nodeName>[\w-]+)\s*\((?<ip>[\d\.]+)\):/m);
-                if (!nodeMatch) return;
-
-                const nodeObj = {
-                    id: nodeMatch.groups.nodeName,
-                    ip: nodeMatch.groups.ip,
-                    interfaceMap: {}, // 物理事實來源
-                    vlanMap: {},      // 邏輯事實來源
-                    aeMap: {}         // 僅供解析輔助使用的快速反向查表
-                };
-
-                // 1.1 解析介面 Description (新增部分：優先爬取介面描述)
-                // 支援格式：set interfaces ge-0/0/0 description "XXX" 或 set interfaces ge-0/0/0.0 description XXX
-                const ifaceDescRegex = /set\s+interfaces\s+(?<iface>[\w\-\/]+)(?:\.\d+)?\s+description\s+"?(?<desc>[^"\n]+)"?/g;
-                let ifDescMatch;
-                while ((ifDescMatch = ifaceDescRegex.exec(section)) !== null) {
-                    const ifName = ifDescMatch.groups.iface;
-                    const desc = ifDescMatch.groups.desc;
-
-                    if (!nodeObj.interfaceMap[ifName]) {
-                        // 初始化基礎屬性，預設 type 判斷：ae 開頭為 aggregate，其餘為 physical
-                        nodeObj.interfaceMap[ifName] = {
-                            type: ifName.startsWith('ae') ? "aggregate" : "physical",
-                            status: "down",
-                            description: desc,
-                            members: ifName.startsWith('ae') ? [] : undefined
-                        };
+                        const lines = val.split('\n').length;
+                        stats.innerText = `${lines} Lines / ${val.length} Chars`;
+                        stats.classList.add('text-success');
                     } else {
-                        nodeObj.interfaceMap[ifName].description = desc;
+                        el.classList.remove('textarea-success', 'bg-success/5');
+                        badge.classList.add('scale-0', 'opacity-0');
+                        badge.classList.remove('scale-100', 'opacity-100');
+                        stats.innerText = "Empty";
+                        stats.classList.remove('text-success');
                     }
-                }
 
-                // 1.2 解析 AE 綁定 (建立實體與 AE 的父子關係)
-                const aeRegex = /set\s+interfaces\s+(?<phys>[\w\-\/]+)\s+ether-options\s+802\.3ad\s+(?<ae>ae\d+)/g;
-                let aeMatch;
-                while ((aeMatch = aeRegex.exec(section)) !== null) {
-                    const phys = aeMatch.groups.phys.split('.')[0];
-                    const ae = aeMatch.groups.ae;
-
-                    // 確保實體介面存在
-                    if (!nodeObj.interfaceMap[phys]) {
-                        nodeObj.interfaceMap[phys] = { type: "physical", status: "down", description: "" };
-                    }
-                    nodeObj.interfaceMap[phys].parent = ae;
-
-                    // 確保 AE 介面存在
-                    if (!nodeObj.interfaceMap[ae]) {
-                        nodeObj.interfaceMap[ae] = { type: "aggregate", status: "down", description: "", members: [] };
-                    }
-                    if (!nodeObj.interfaceMap[ae].members.includes(phys)) {
-                        nodeObj.interfaceMap[ae].members.push(phys);
-                    }
-                    nodeObj.aeMap[phys] = ae;
-                }
-
-                // 1.3 解析 VLAN 定義
-                const vlanRegex = /set\s+vlans\s+(?<name>\S+)\s+vlan-id\s+(?<id>\d+)/g;
-                let vMatch;
-                while ((vMatch = vlanRegex.exec(section)) !== null) {
-                    const vName = vMatch.groups.name;
-                    nodeObj.vlanMap[vName] = {
-                        id: parseInt(vMatch.groups.id),
-                        name: vName,
-                        description: "",
-                        interfaceNames: new Set(),
-                        macs: new Set()
-                    };
-                }
-
-                // 1.4 解析 VLAN Description
-                const vlanDescRegex = /set\s+vlans\s+(?<name>\S+)\s+description\s+"?(?<desc>[^"\n]+)"?/g;
-                let dMatch;
-                while ((dMatch = vlanDescRegex.exec(section)) !== null) {
-                    if (nodeObj.vlanMap[dMatch.groups.name]) {
-                        nodeObj.vlanMap[dMatch.groups.name].description = dMatch.groups.desc;
-                    }
-                }
-                nodes.push(nodeObj);
+                    // 觸發重新解析
+                    triggerFullProcess();
+                });
             });
 
-            // --- 第二階段：更新物理狀態 (show vlan) ---
-            const vsSections = vlanEditor.value.split(/_{5,}/);
-            vsSections.forEach(section => {
-                const hostMatch = section.match(/([A-Z0-9_]+)\s\(/);
-                if (!hostMatch) return;
-                const targetNode = nodes.find(n => n.id === hostMatch[1]);
-                if (!targetNode) return;
+        }
 
-                const vlanBlockRegex = /VLAN Name:\s+(?<vlanName>\S+)[^]*?(?=VLAN Name:|$|Number of)/g;
-                let blockMatch;
-                while ((blockMatch = vlanBlockRegex.exec(section)) !== null) {
-                    const vName = blockMatch.groups.vlanName;
-                    const targetVlan = targetNode.vlanMap[vName];
-                    if (!targetVlan) continue;
+        // 建議提取一個統一的解析 function
+        function triggerFullProcess() {
+            // 2. 觸發解析邏輯
+            // 在 init() 內部的解析邏輯後方加入
+            try {
+                const result = auditor.processData(
+                    document.getElementById('config-editor').value,
+                    document.getElementById('vlan-editor').value,
+                    document.getElementById('switch-editor').value,
+                    document.getElementById('topo-editor').value
+                );
 
-                    const ifaceRegex = /^\s+(?<iface>[\w\/\-\.]+)(?<status>\*?)\s*,/gm;
-                    let iMatch;
-                    while ((iMatch = ifaceRegex.exec(blockMatch[0])) !== null) {
-                        const rawIface = iMatch.groups.iface.split('.')[0];
-                        const isActive = iMatch.groups.status === '*';
+                const jsonStr = JSON.stringify(result, null, 2);
 
-                        // 更新 InterfaceMap 的唯一狀態
-                        if (!targetNode.interfaceMap[rawIface]) {
-                            targetNode.interfaceMap[rawIface] = { type: rawIface.startsWith('ae') ? "aggregate" : "physical", status: "down", members: [] };
-                        }
-                        if (isActive) {
-                            targetNode.interfaceMap[rawIface].status = "up";
-                            const parentAe = targetNode.interfaceMap[rawIface].parent;
-                            if (parentAe) targetNode.interfaceMap[parentAe].status = "up";
-                        }
+                // 檢查資料是否真的有變動且非空
+                if (viewer.value !== jsonStr && jsonStr !== "{}") {
+                    viewer.value = jsonStr;
 
-                        // 關聯名稱到 VLAN
-                        targetVlan.interfaceNames.add(rawIface);
-                    }
+                    // --- Result 反應式 UI 邏輯 ---
+                    const resultCard = document.getElementById('card-result');
+                    const resultBadge = document.getElementById('badge-result');
+                    const resultStats = document.getElementById('stats-result');
+
+                    // 1. 觸發外框脈衝動畫
+                    resultCard.classList.remove('animate-update');
+                    void resultCard.offsetWidth; // 強制重繪觸發動畫
+                    resultCard.classList.add('animate-update');
+
+                    // 2. 顯示 READY 標籤
+                    resultBadge.classList.remove('scale-0', 'opacity-0');
+                    resultBadge.classList.add('scale-100', 'opacity-100');
+
+                    // 3. 更新統計 (計算節點與連線數)
+                    const nodeCount = result.nodes?.length || 0;
+                    resultStats.innerText = `${nodeCount} Nodes Analyzed`;
+                    resultStats.classList.add('text-primary');
                 }
-            });
+            } catch (err) {
+                console.error("解析錯誤:", err);
+            }
+        }
+        function clearEditor(id) {
+            const el = document.getElementById(id);
+            el.value = '';
+            el.dispatchEvent(new Event('input'));
+        }
 
-            // --- 第三階段：更新 MAC 與補充介面 (Switch Table) ---
-            const swSections = switchEditor.value.split(/_{5,}/);
-            swSections.forEach(section => {
-                const hostMatch = section.match(/([A-Z0-9_]+)\s\(/);
-                if (!hostMatch) return;
-                const targetNode = nodes.find(n => n.id === hostMatch[1]);
-                if (!targetNode) return;
+        function handleDownloadJSON() {
+            if (!viewer.value) return alert("無資料");
+            const blob = new Blob([viewer.value], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_${new Date().getTime()}.json`;
+            a.click();
+        }
+        // 下載 CSV
+        function handleDownloadCSV() {
+            const csv = auditor.generateCSV();
+            if (!csv) return alert("請先輸入資料");
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_${new Date().getTime()}.csv`;
+            a.click();
+        }
 
-                const rowRegex = /^\s+(?<vlan>[\w-]+)\s+(?<mac>[a-f0-9:]{17})\s+[A-Z]+\s+[\d-]+\s+(?<iface>[\w\/\-\.]+)/gm;
-                let m;
-                while ((m = rowRegex.exec(section)) !== null) {
-                    const vlanNameRaw = m.groups.vlan;
-                    const macAddr = m.groups.mac;
-                    const rawIface = m.groups.iface.split('.')[0];
+        // 在 vlan2.html 中的 handleDownloadExcel 函式加入防錯
+        function handleDownloadExcel() {
+            // 1. 檢查是否有資料
+            if (!viewer.value || viewer.value === "" || viewer.value === "{}") {
+                return alert("尚無資料可導出，請先貼入 Config 並確保解析成功。");
+            }
 
-                    const standardVlanName = Object.keys(targetNode.vlanMap).find(k => k.toLowerCase() === vlanNameRaw.toLowerCase());
-
-                    if (standardVlanName) {
-                        // 1. 寫入 VLAN Map (邏輯視圖)
-                        const vObj = targetNode.vlanMap[standardVlanName];
-                        vObj.macs.add(macAddr);
-
-                        let logicName = rawIface;
-                        const aeLookup = targetNode.aeMap[rawIface];
-                        if (typeof aeLookup === 'string') logicName = aeLookup;
-
-                        vObj.interfaceNames.add(logicName);
-
-                        // 2 & 3 合併處理：同步更新物理視圖 (interfaceMap)
-                        if (!targetNode.interfaceMap[logicName]) {
-                            // 全新發現的介面：初始化所有屬性
-                            targetNode.interfaceMap[logicName] = {
-                                type: logicName.startsWith("ae") ? "aggregate" : "physical",
-                                status: "up",
-                                description: "Dynamic Discovery (No Config Desc)",
-                                members: logicName.startsWith("ae") ? [] : undefined,
-                                macs: new Set()
-                            };
-                        } else {
-                            // 已存在的介面：僅更新狀態與確保 macs Set 存在
-                            targetNode.interfaceMap[logicName].status = "up";
-                            if (!targetNode.interfaceMap[logicName].macs) {
-                                targetNode.interfaceMap[logicName].macs = new Set();
-                            }
-                        }
-
-                        // 統一在最後寫入 MAC (無論是新建還是更新)
-                        targetNode.interfaceMap[logicName].macs.add(macAddr);
-                    }
-                }
-            });
-
-            // --- 第四階段：資料轉換與 Topology 關聯 ---
-
-            // 1. 關鍵：建立一個完全「陣列化」的資料副本供 Viewer 使用
-            const processedNodes = nodes.map(n => ({
-                id: n.id,
-                ip: n.ip,
-                // 將 vlanMap 轉換為陣列，並將內部的 Set 轉為 Array
-                vlans: Object.values(n.vlanMap).map(v => ({
-                    id: v.id,
-                    name: v.name,
-                    description: v.description,
-                    mac_count: v.macs.size,
-                    mac_list: Array.from(v.macs),      // 轉為陣列後 JSON 才能顯示內容
-                    interfaces: Array.from(v.interfaceNames) // 轉為陣列
-                })),
-                // 如果需要查閱介面狀態，也可以在這裡展開 interfaceMap
-                interfaces_detail: Object.entries(n.interfaceMap).map(([name, info]) => ({
-                    name,
-                    ...info,
-                    mac_count: info.macs ? info.macs.size : 0,
-                    mac_list: info.macs ? Array.from(info.macs) : []
-                }))
-            }));
-
-            // --- 第四階段：Topology 關聯與自動補全缺失鏈路 ---
-            let finalNodes = [];
-            let finalEdges = [];
+            // 2. 檢查 XLSX 函式庫是否成功載入
+            if (typeof XLSX === 'undefined') {
+                alert("Excel 函式庫載入失敗，請檢查網路連線或 CDN 連結。");
+                return;
+            }
 
             try {
-                const topo = JSON.parse(topoEditor.value || '{"nodes":[], "edges":[]}');
-                const nodeLookup = new Map(processedNodes.map(n => [n.id, n]));
-
-                // 1. 建立已定義 Port 的快取
-                const mappedPorts = new Set();
-                (topo.edges || []).forEach(e => {
-                    if (e.from && e.labelFrom) mappedPorts.add(`${e.from}|${e.labelFrom.split('.')[0]}`);
-                    if (e.to && e.labelTo) mappedPorts.add(`${e.to}|${e.labelTo.split('.')[0]}`);
-                });
-
-                // 2. 初始化 finalNodes (繼承 Topo 座標)
-                if (topo.nodes && topo.nodes.length > 0) {
-                    finalNodes = topo.nodes.map(topoNode => {
-                        const configNode = nodeLookup.get(topoNode.id);
-                        return configNode ? { ...topoNode, ...configNode } : topoNode;
-                    });
-                } else {
-                    finalNodes = [...processedNodes];
-                }
-
-                // 3. 收集所有原始 Edge
-                let allEdges = [...(topo.edges || [])];
-
-                // 4. 【執行自動補全】僅針對「實體」且「Up」且「未畫線」的介面
-                processedNodes.forEach(n => {
-                    n.interfaces_detail.forEach(iface => {
-                        if (iface.status === 'up' && !iface.parent && iface.type === 'physical' && !mappedPorts.has(`${n.id}|${iface.name}`)) {
-                            const virtualPeerId = `Peer_of_${n.id}_${iface.name}`;
-                            const macCount = iface.mac_count || 0;
-                            const isEdgeNode = macCount === 1;
-                            const isNoTraffic = macCount === 0;
-
-                            let macDisplay = isNoTraffic ? "(No Traffic)" : `(MACs: ${macCount})`;
-
-                            if (isEdgeNode) {
-                                const primaryMac = iface.mac_list?.[0];
-                                if (primaryMac) {
-                                    const vendorName = getVendor(primaryMac);
-                                    if (vendorName !== "Unknown Vendor") {
-                                        // 取得後三組 MAC (後半段)
-                                        const macParts = primaryMac.split(':');
-                                        const macSuffix = macParts.length === 6 ? macParts.slice(3).join(':') : primaryMac.slice(-8);
-                                        macDisplay = `(${vendorName}:${macSuffix})`;
-                                    } else {
-                                        macDisplay = `(${primaryMac})`;
-                                    }
-                                }
-                            }
-
-                            const descLabel = iface.description?.trim() || (isEdgeNode ? "End Device" : "Unknown Peer");
-                            const finalPeerLabel = `${descLabel}\n${macDisplay}`;
-
-                            finalNodes.push({
-                                id: virtualPeerId,
-                                label: finalPeerLabel,
-                                group: isNoTraffic ? "NoTraffic" : (isEdgeNode ? "EdgeNode" : "Unknown"),
-                                shape: isNoTraffic ? "square" : (isEdgeNode ? "dot" : "diamond"),
-                                size: isNoTraffic ? 5 : (isEdgeNode ? 7 : 12),
-                                font: { size: 11, multi: true, face: 'monospace' }
-                            });
-
-                            allEdges.push({
-                                from: n.id,
-                                to: virtualPeerId,
-                                labelFrom: iface.name,
-                                isMissing: true,
-                                dashes: true,
-                                color: { color: isNoTraffic ? "#cfd8dc" : (isEdgeNode ? "#b3e5fc" : "#ffc107") }
-                            });
-                        }
-                    });
-                });
-
-                // 5. 【統一染色與資訊補全】
-                finalEdges = allEdges.map(edge => {
-                    const vlanIdSet = new Set();
-                    let descriptions = new Set();
-                    let totalMacCount = 0;
-
-                    const check = (nodeId, label) => {
-                        const originalNode = nodes.find(n => n.id === nodeId);
-                        const node = nodeLookup.get(nodeId);
-                        if (!node || !label || !originalNode) return;
-
-                        let targetIface = label.split('.')[0];
-                        const ifaceInfo = originalNode.interfaceMap[targetIface];
-                        if (ifaceInfo && ifaceInfo.parent) targetIface = ifaceInfo.parent;
-
-                        node.vlans.forEach(v => {
-                            if (v.interfaces.includes(targetIface)) {
-                                vlanIdSet.add(v.id);
-                                if (v.description) descriptions.add(v.description);
-                                // 累加該介面所有 VLAN 下的 MAC
-                                if (edge.isMissing) totalMacCount += v.mac_count;
-                            }
-                        });
-                    };
-
-                    check(edge.from, edge.labelFrom);
-                    check(edge.to, edge.labelTo);
-
-                    const ids = Array.from(vlanIdSet).sort((a, b) => a - b);
-                    const vlanDescStr = Array.from(descriptions).join(' / ') || "無描述";
-
-                    // --- 關鍵修正：回頭更新虛擬 Node 內容 ---
-                    if (edge.isMissing) {
-                        const vNode = finalNodes.find(n => n.id === edge.to);
-                        if (vNode) {
-                            // 1. 保留原本在上一階段產生的 baseName (含介面描述)
-                            const baseName = vNode.label;
-
-                            // 2. 重新組合更專業的稽核標籤 (Scannability 優化)
-                            // 使用 📌 代表物理描述，🏷️ 代表 VLAN 描述
-                            vNode.label = `${baseName}\nVLAN: ${ids.join(',')}\nvDesc: ${vlanDescStr}`;
-
-                            // 3. 顏色優化：只有當 MAC 異常多 (例如 > 5) 時才變紅色，否則保留我們原本的狀態配色
-                            if (totalMacCount > 5) {
-                                vNode.color = { background: "#ffebeb", border: "#ff5722" }; // 警告色
-                            }
-                        }
-
-                        // 回傳 Edge 的樣式更新
-                        return {
-                            ...edge,
-                            vlan_ids: ids,
-                            labelFrom: `${edge.labelFrom}`,
-                            label: `vlan: ${ids.join(',')}${edge.label ? ' ' + edge.label : ''}`,
-                            // 增加文字背景讓連線上的標籤更清楚
-                            font: {
-                                size: 11,
-                                color: "#856404",
-                                strokeWidth: 4,
-                                strokeColor: "#ffffff"
-                            }
-                        };
-                    }
-
-                    // 一般線路，僅補上 VLAN ID
-                    return ids.length > 0 ? {
-                        ...edge,
-                        vlan_ids: ids,
-                        label: `vlan: ${ids.join(',')}${edge.label ? ' ' + edge.label : ''}`
-                    } : edge;
-                });
-
-            } catch (e) {
-                console.error("Final Processing Error", e);
-                finalNodes = processedNodes;
+                auditor.exportToExcel();
+            } catch (err) {
+                console.error("Excel 匯出失敗:", err);
+                alert("匯出失敗，請查看控制台錯誤。");
             }
-
-            networkData = { nodes: finalNodes, edges: finalEdges };
-            viewer.value = JSON.stringify(networkData, null, 2);
         }
-
-        function downloadCSV() {
-            if (!networkData.nodes || networkData.nodes.length === 0) {
-                return alert("沒有資料，請先點擊 Process");
-            }
-
-            // 更新表頭：區分 VLAN MAC Count 與 Iface MAC Count
-            let csv = "\ufeffDevice,IP,VLAN ID,VLAN Name,VLAN Desc,VLAN MAC Count,Interface,Status,Type,Physical Member,Interface Desc,Iface MAC Count,VLAN MAC List\n";
-
-            networkData.nodes.forEach(n => {
-                if (n.group === "Unknown") return;
-
-                n.vlans.forEach(v => {
-                    // 這裡代表該 VLAN 在此設備上的總 MAC 清單
-                    const vlanMacListStr = `"${(v.mac_list || []).join(', ')}"`;
-                    const vlanDesc = `"${(v.description || "").replace(/"/g, '""')}"`;
-                    const vlanMacCount = v.mac_count || 0;
-
-                    v.interfaces.forEach(ifaceName => {
-                        const ifaceInfo = n.interfaces_detail.find(i => i.name === ifaceName) || {
-                            status: "down",
-                            type: "physical",
-                            description: "",
-                            members: [],
-                            mac_count: 0 // 預設 0
-                        };
-
-                        const status = ifaceInfo.status || "down";
-                        const type = ifaceInfo.type || "physical";
-                        const members = ifaceInfo.members || [];
-                        const ifaceDesc = `"${(ifaceInfo.description || "").replace(/"/g, '""')}"`;
-
-                        // 取得該介面專屬的 MAC 數量 (來自我們在第三階段存入 interfaceMap 的 macs Set)
-                        const ifaceMacCount = ifaceInfo.mac_count || 0;
-
-                        if (members.length > 0) {
-                            members.forEach(m => {
-                                csv += `${n.id},${n.ip},${v.id},${v.name},${vlanDesc},${vlanMacCount},${ifaceName},${status},aggregate,${m},${ifaceDesc},${ifaceMacCount},${vlanMacListStr}\n`;
-                            });
-                        } else {
-                            csv += `${n.id},${n.ip},${v.id},${v.name},${vlanDesc},${vlanMacCount},${ifaceName},${status},${type},${ifaceName},${ifaceDesc},${ifaceMacCount},${vlanMacListStr}\n`;
-                        }
-                    });
-                });
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const a = document.createElement('a');
-            a.download = `juniper_audit_${new Date().getTime()}.csv`;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-        }
-
-        function downloadJSON() {
-            const blob = new Blob([viewer.value], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `audit_data.json`;
-            a.click();
-        }
-
-        [configEditor, vlanEditor, switchEditor, topoEditor].forEach(el => el.addEventListener('input', process));
-
-        initOuiDatabase();
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 
