@@ -143,7 +143,7 @@
     <script src="js/route.js"></script>
     <script>
         // Data configurations (Kept Original)
-        const NETWORK_CONFIG = {
+        const NETWORK_TOPOLOGY = {
             nodes: [
                 { id: 'H1', label: 'HQ Host\n192.168.1.10', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
                 { id: 'R1', label: 'HQ Core', group: 'HQ', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '192.168.1.1', mask: 24 }, { name: 'Gig0/1', ip: '10.0.1.1', mask: 24 }, { name: 'Gig0/2', ip: '172.16.254.1', mask: 30 }, { name: 'Gig0/3', ip: '10.255.1.1', mask: 30 }], routingTable: [{ network: '10.0.1.0', mask: 24, nextHop: '10.0.1.2' }, { network: '172.16.1.0', mask: 24, nextHop: '172.16.254.2' }, { network: '10.20.1.0', mask: 24, nextHop: '10.255.1.2' }, { network: '0.0.0.0', mask: 0, nextHop: '172.16.254.2' }] },
@@ -175,8 +175,10 @@
         };
 
         // Initialize Analyzer
-        const analyzer = new NetworkAnalyzer('mynetwork', NETWORK_CONFIG);
-        window.onload = () => analyzer.init();
+        const analyzer = new NetworkAnalyzer('mynetwork', NETWORK_TOPOLOGY);
+        window.addEventListener('load', () => {
+            analyzer.init();
+        });
     </script>
 </body>
 
