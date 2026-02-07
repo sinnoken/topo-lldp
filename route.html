@@ -54,7 +54,7 @@
 <body class="h-screen bg-base-200 flex flex-col">
 
     <nav class="navbar bg-base-100 shadow-sm px-6 h-16 flex-none">
-        <div class="flex-1 gap-2">
+        <div class="flex-1 flex items-center gap-4">
             <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <span class="material-symbols-outlined text-primary text-3xl">settings_ethernet</span>
                 <span class="text-xl font-bold text-base-content">Network <span
@@ -68,10 +68,9 @@
                 <span class="text-[10px] uppercase tracking-widest text-base-content/50 font-bold">Topology
                     Engine</span>
             </div>
-
         </div>
 
-        <div class="flex-none gap-4 ">
+        <div class="flex-none">
             <div class="join shadow-sm border border-base-300">
                 <div class="join-item flex items-center bg-base-200 px-3 gap-2 border-r border-base-300">
                     <span class="text-[10px] font-black text-base-content/40 uppercase">Source</span>
@@ -88,6 +87,10 @@
                     Run Analysis
                 </button>
             </div>
+        </div>
+
+        <div class="flex-1 flex justify-end">
+            <div class="text-[10px] text-base-content/30 font-bold uppercase tracking-tighter">V3.0 Stable</div>
         </div>
     </nav>
 
@@ -154,10 +157,10 @@
                 { id: 'Cloud', label: 'Public DNS\n8.8.8.8', group: 'Internet', type: 'host', ip: '8.8.8.8', mask: 32, gateway: '8.8.8.7' }
             ],
             edges: [
-                { id: 'e1', from: 'H1', to: 'R1', label: 'Gig0/0' },
-                { id: 'e2', from: 'R1', to: 'R2', label: 'Gig0/2' },
-                { id: 'e7', from: 'R1', to: 'R4', label: 'Gig0/3' },
-                { id: 'e4', from: 'R3', to: 'R1', label: 'VPN', dashes: true },
+                { id: 'e1', from: 'H1', to: 'R1', label: 'v100', labelFrom: 'Gig0/0', labelTo: 'Gig0/4' },
+                { id: 'e2', from: 'R1', to: 'R2', label: 'v200', labelFrom: 'Gig0/1', labelTo: 'Gig0/5' },
+                { id: 'e7', from: 'R1', to: 'R4', label: 'v300', labelFrom: 'Gig0/2', labelTo: 'Gig0/6' },
+                { id: 'e4', from: 'R3', to: 'R1', label: 'VPN', labelFrom: 'Gig0/3', labelTo: 'Gig0/7', dashes: true },
                 { id: 'e3', from: 'R2', to: 'H2', label: 'Gig0/0' },
                 { id: 'e6', from: 'R2', to: 'Cloud', label: 'Ser0/0' },
                 { id: 'e8', from: 'R2', to: 'R4', label: 'Backup' },

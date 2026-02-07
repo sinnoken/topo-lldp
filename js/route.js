@@ -1,5 +1,5 @@
 /**
- * route.js - 段落 1: 基礎架構與初始化
+ * route.js - 整合 labelFrom/labelTo 功能版
  */
 class NetworkAnalyzer {
     constructor(containerId, config) {
@@ -8,42 +8,38 @@ class NetworkAnalyzer {
         this.edgesRaw = config.edges;
         this.colorConfig = config.colors;
 
-        // Vis.js 專用的實體儲存空間
         this.nodes = null;
         this.edges = null;
         this.network = null;
     }
 
-    // 初始化圖形介面
     init() {
         const container = document.getElementById(this.containerId);
 
-        // 1. 轉換原始資料為 Vis DataSet
         this.nodes = new vis.DataSet(this.nodesRaw.map(n => ({
             ...n,
             shape: n.type === 'router' ? 'dot' : 'box',
-            font: { color: '#3c4043', size: 12, face: 'Google Sans' },
+            font: { color: '#3c4043', size: 10, face: 'Google Sans' },
             color: {
                 background: '#ffffff',
                 border: this.colorConfig[n.group] || '#dadce0'
             },
-            borderWidth: 1.5,
-            size: 20
+            borderWidth: 2,
+            size: 10
         })));
 
         this.edges = new vis.DataSet(this.edgesRaw.map(e => ({
             ...e,
-            font: { size: 10, color: '#70757a', face: 'Roboto Mono' },
+            font: { size: 5, color: '#70757a', face: 'Roboto Mono' },
             color: { color: '#dadce0' },
             arrows: 'to',
-            width: 1.5,
+            width: 1,
             smooth: { type: 'curvedCW', roundness: 0.1 }
         })));
 
-        // 2. 設定繪圖選項並啟動
         const options = {
             physics: { enabled: true, solver: 'forceAtlas2Based' },
-            edges: { arrows: 'to' }
+            interaction: { hover: true }
         };
 
         this.network = new vis.Network(container, {
@@ -51,7 +47,115 @@ class NetworkAnalyzer {
             edges: this.edges
         }, options);
 
+        // --- 核心整合：監聽繪製事件 ---
+        this.network.on("afterDrawing", (ctx) => {
+            this.renderCustomLabels(ctx);
+        });
+
         window.addEventListener('resize', () => this.network.fit());
+    }
+
+    renderCustomLabels(ctx) {
+        const allEdges = this.network.body.edges;
+        // 1. 一次性取得所有原始資料，避免在迴圈中重覆呼叫 get(id)
+        const rawEdgesData = this.edges.get();
+
+        rawEdgesData.forEach(rawData => {
+            const id = rawData.id;
+            const edge = allEdges[id];
+
+            // 檢查 edge 是否存在於畫面上 (vis.js 可能因過濾或延遲未渲染)
+            if (!edge) return;
+
+            const { labelFrom, labelTo } = rawData;
+            const isHover = edge.hover;
+
+            // 2. 只有在需要繪製標籤時才計算昂貴的屬性
+            if (labelFrom || labelTo || isHover) {
+                const viaNode = edge.edgeType.getViaNode();
+
+                if (labelFrom || labelTo) {
+                    const { font, selected } = edge.options; // 解構常用屬性
+
+                    ctx.save();
+                    // 3. 預先設定好共用狀態
+                    ctx.font = `${edge.selected ? 'bold' : ''} ${font.size}px ${font.face}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.2, viaNode);
+                    if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.8, viaNode);
+
+                    ctx.restore();
+                }
+
+                // 處理 Hover 置頂
+                if (isHover) {
+                    edge.drawLabel(ctx, viaNode);
+                }
+            }
+        });
+    }
+
+    _drawSingleLabel(ctx, edge, text, percentage, viaNode) {
+        // 取得基礎百分比位置
+        let pt = edge.edgeType.getPoint(percentage, viaNode);
+
+        // 穩健性檢查：若點位無效則跳過
+        if (!pt || isNaN(pt.x)) return;
+
+        const from = edge.from;
+        const to = edge.to;
+
+        // 計算向量與角度
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // 如果線條太短，自動調整百分比，避免標籤重疊節點
+        if (distance < 50) {
+            if (percentage < 0.5) percentage = 0.3;
+            else percentage = 0.7;
+            pt = edge.edgeType.getPoint(percentage, viaNode);
+        }
+
+        let angle = Math.atan2(dy, dx);
+        // 確保文字方向始終易於閱讀 (不倒立)
+        if (angle < -Math.PI / 2 || angle > Math.PI / 2) angle += Math.PI;
+
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(angle);
+
+        // 繪製半透明膠囊背景
+        const paddingH = 4;
+        const paddingV = 2;
+        const metrics = ctx.measureText(text);
+        const w = metrics.width;
+        const h = 12; // 調整為適合閱讀的高度
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.shadowColor = 'rgba(0,0,0,0.1)';
+        ctx.shadowBlur = 4;
+
+        this._drawRoundedRect(ctx, -w / 2 - paddingH, -h / 2, w + paddingH * 2, h, 3);
+        ctx.fill();
+
+        // 移除陰影再畫文字，保持清晰
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
+        ctx.fillText(text, 0, 1); // 微調 y 軸偏移使其垂直居中
+        ctx.restore();
+    }
+
+    _drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
     }
 
     /**
