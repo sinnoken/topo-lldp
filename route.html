@@ -51,23 +51,27 @@
     </style>
 </head>
 
-<body class="h-screen flex flex-col overflow-hidden bg-base-200">
+<body class="h-screen bg-base-200 flex flex-col">
 
-    <nav class="navbar bg-base-100 border-b border-base-300 px-6 h-16 z-30 shadow-sm">
+    <nav class="navbar bg-base-100 shadow-sm px-6 h-16 flex-none">
         <div class="flex-1 gap-2">
             <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div class="p-2 bg-primary/10 rounded-lg text-primary">
-                    <span class="material-symbols-outlined text-2xl">account_tree</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-lg font-bold leading-none">Route Analyzer</span>
-                    <span class="text-[10px] uppercase tracking-widest text-base-content/50 font-bold">Topology
-                        Engine</span>
-                </div>
+                <span class="material-symbols-outlined text-primary text-3xl">settings_ethernet</span>
+                <span class="text-xl font-bold text-base-content">Network <span
+                        class="text-primary">Toolbox</span></span>
             </a>
+            <div class="p-2 bg-primary/10 rounded-lg text-primary">
+                <span class="material-symbols-outlined text-3xl">account_tree</span>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-lg font-bold leading-none">Route Analyzer</span>
+                <span class="text-[10px] uppercase tracking-widest text-base-content/50 font-bold">Topology
+                    Engine</span>
+            </div>
+
         </div>
 
-        <div class="flex-none gap-4">
+        <div class="flex-none gap-4 ">
             <div class="join shadow-sm border border-base-300">
                 <div class="join-item flex items-center bg-base-200 px-3 gap-2 border-r border-base-300">
                     <span class="text-[10px] font-black text-base-content/40 uppercase">Source</span>
@@ -84,10 +88,6 @@
                     Run Analysis
                 </button>
             </div>
-
-            <div class="divider divider-horizontal mx-1"></div>
-
-            <div class="badge badge-outline badge-sm text-base-content/40 py-3 font-mono">v3.2-STABLE</div>
         </div>
     </nav>
 

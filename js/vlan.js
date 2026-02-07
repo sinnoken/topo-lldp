@@ -70,42 +70,80 @@ class VlanAuditor {
     /**
      * 初始化 OUI 資料庫：增加資料清洗邏輯
      */
+    /**
+      * 初始化 OUI 資料庫：加入方案 B (超時控制) 與錯誤處理優化
+      */
     async initOuiDatabase() {
         const CACHE_KEY = 'vlan_auditor_oui_cache';
-        const EXPIRY = 1 * 24 * 60 * 60 * 1000; // 7天
+        const EXPIRY = 1 * 24 * 60 * 60 * 1000; // 24小時 (可根據需求調整)
 
+        // 1. 先嘗試從本地快取讀取
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
                 const { timestamp, data } = JSON.parse(cached);
                 if (Date.now() - timestamp < EXPIRY) {
                     this.globalOuiData = data;
+                    console.log("✅ OUI Loaded from Cache");
                     return;
                 }
-            } catch (e) { localStorage.removeItem(CACHE_KEY); }
+            } catch (e) {
+                localStorage.removeItem(CACHE_KEY);
+            }
         }
 
+        // 2. 方案 B：設定 Fetch 超時控制 (AbortController)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 設定 5 秒超時
+
         try {
-            // 使用 silverwind 的 OUI 資料庫
-            const res = await fetch('https://cdn.jsdelivr.net/gh/silverwind/oui-data@master/index.json');
+            console.log("🌐 Fetching OUI from CDN...");
+            const res = await fetch('https://cdn.jsdelivr.net/gh/silverwind/oui-data@master/index.json', {
+                signal: controller.signal // 綁定超時訊號
+            });
+
+            clearTimeout(timeoutId); // 成功連線後清除計時器
+
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
             const raw = await res.json();
 
-            // 資料清洗：在存入快取前就先精簡名稱，大幅減少 Storage 佔用空間
+            // 3. 資料清洗：精簡名稱以節省空間
             const cleaned = {};
             for (const [mac, fullName] of Object.entries(raw)) {
-                // 將 000000 -> XEROX (只取第一行並清洗)
                 cleaned[mac.toUpperCase()] = this.shortenVendorName(fullName);
             }
 
             this.globalOuiData = cleaned;
-            localStorage.setItem(CACHE_KEY, JSON.stringify({
-                timestamp: Date.now(),
-                data: cleaned
-            }));
-            console.log("✅ OUI Database cleaned and cached");
+
+            // 4. 安全存入 LocalStorage (預防空間溢出)
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    timestamp: Date.now(),
+                    data: cleaned
+                }));
+                console.log("✅ OUI Database cleaned and cached");
+            } catch (storageError) {
+                console.warn("⚠️ LocalStorage 空間不足，本次僅於記憶體中運行");
+            }
+
         } catch (e) {
-            console.warn("⚠️ OUI 載入失敗，使用基礎清單");
-            this.globalOuiData = { "005056": "VMware", "0010DB": "Juniper", "00000C": "Cisco" };
+            clearTimeout(timeoutId);
+            if (e.name === 'AbortError') {
+                console.error("❌ OUI 載入超時 (CDN 回應過久)");
+            } else {
+                console.warn("⚠️ OUI 載入失敗 (無網路或 CORS 限制)");
+            }
+
+            // 最終備案：使用基礎清單
+            this.globalOuiData = {
+                "005056": "VMware",
+                "0010DB": "Juniper",
+                "00000C": "Cisco",
+                "000142": "Cisco",
+                "000C29": "VMware",
+                "F8C288": "HPE"
+            };
         }
     }
 
