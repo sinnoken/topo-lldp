@@ -101,7 +101,7 @@
                         UPDATED</span>
                     <textarea id="config-editor"
                         class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
-                        placeholder="Paste 'show configuration' here..."></textarea>
+                        placeholder="Paste 'show configuration | dispaly set | match 'vlans|description|aggregated' here..."></textarea>
                     <div
                         class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
                         <span id="stats-config">Empty</span>
@@ -124,7 +124,7 @@
                         UPDATED</span>
                     <textarea id="vlan-editor"
                         class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
-                        placeholder="貼上 show vlan..."></textarea>
+                        placeholder="貼上 show vlan detail| match tag..."></textarea>
                     <div
                         class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
                         <span id="stats-vlan">Empty</span>
@@ -193,7 +193,14 @@
                         UPDATED</span>
                     <textarea id="arp-editor"
                         class="textarea textarea-bordered w-full flex-grow code-font bg-base-100 focus:border-primary status-transition"
-                        placeholder="貼上 show arp..."></textarea>
+                        placeholder="貼上 show arp...">{
+    "arpMap": {
+        "ER_TEST_1": {
+            "mgmtIp": "10.1.1.1",
+            "entries": [
+                { "port": "poer1", "mac": "11:11:11:11:11:11", "ip": "10.1.1.1" }
+            ]
+        },}}</textarea>
                     <div
                         class="flex justify-between items-center mt-2 px-1 text-[10px] text-base-content/40 font-bold uppercase tracking-tighter">
                         <span id="stats-arp">Empty</span>
@@ -235,8 +242,6 @@
     </footer>
     <script>
         let auditor;
-
-
         const editorConfigs = [
             { id: 'config-editor', prefix: 'config' },
             { id: 'vlan-editor', prefix: 'vlan' },
