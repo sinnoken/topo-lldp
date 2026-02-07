@@ -2,6 +2,7 @@
  * VLAN Auditor 核心處理邏輯 (解決長名稱與欄位精準化版本)
  */
 class VlanAuditor {
+
     constructor() {
         this.globalOuiData = null;
         this.globalArpMap = {}; // 新增：存儲 MAC -> IP 的對照表
@@ -371,7 +372,6 @@ class VlanAuditor {
         });
         return rows;
     }
-
 
     generateCSV() {
         const data = this.getFlattenedData();
