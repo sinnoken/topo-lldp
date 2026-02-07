@@ -235,6 +235,7 @@
     </footer>
     <script>
         const auditor = new VlanAuditor();
+
         const editorConfigs = [
             { id: 'config-editor', prefix: 'config' },
             { id: 'vlan-editor', prefix: 'vlan' },
@@ -245,43 +246,55 @@
         const viewer = document.getElementById('vlan-viewer');
 
         async function init() {
-            await auditor.initOuiDatabase();
+            // 1. 立即綁定所有編輯器的事件 (這讓使用者一打開網頁就能貼上資料)
+            setupEventListeners();
 
+            try {
+                // 2. 背景載入 OUI 資料庫，不使用 await 阻塞後續邏輯
+                // 或者使用 await，但確保它在 setupEventListeners 之後
+                console.log("🌐 正在初始化 OUI 資料庫...");
+                await auditor.initOuiDatabase();
+                console.log("✅ OUI 資料庫已就緒");
+
+                // 3. 載入完成後，如果編輯器已經有資料，手動觸發一次解析
+                triggerFullProcess();
+            } catch (err) {
+                console.error("OUI 初始化失敗:", err);
+            }
+        }
+
+        // 將原本在 init 裡的循環提取成獨立函式
+        function setupEventListeners() {
             editorConfigs.forEach(conf => {
                 const el = document.getElementById(conf.id);
                 const badge = document.getElementById(`badge-${conf.prefix}`);
                 const stats = document.getElementById(`stats-${conf.prefix}`);
 
+                if (!el) return;
+
                 el.addEventListener('input', () => {
-                    // 1. 更新 UI 狀態
                     const val = el.value.trim();
-                    // 如果是 ARP 編輯器，先解析 JSON
                     if (conf.id === 'arp-editor') {
                         auditor.parseArpData(val);
                     }
-                    const hasContent = val.length > 0;
 
-                    if (hasContent) {
+                    // UI 回饋邏輯
+                    if (val.length > 0) {
                         el.classList.add('textarea-success', 'bg-success/5');
-                        badge.classList.remove('scale-0', 'opacity-0');
-                        badge.classList.add('scale-100', 'opacity-100');
-
-                        const lines = val.split('\n').length;
-                        stats.innerText = `${lines} Lines / ${val.length} Chars`;
-                        stats.classList.add('text-success');
+                        badge?.classList.replace('scale-0', 'scale-100');
+                        badge?.classList.replace('opacity-0', 'opacity-100');
+                        if (stats) stats.innerText = `${val.split('\n').length} Lines`;
                     } else {
                         el.classList.remove('textarea-success', 'bg-success/5');
-                        badge.classList.add('scale-0', 'opacity-0');
-                        badge.classList.remove('scale-100', 'opacity-100');
-                        stats.innerText = "Empty";
-                        stats.classList.remove('text-success');
+                        badge?.classList.replace('scale-100', 'scale-0');
+                        badge?.classList.replace('opacity-100', 'opacity-0');
+                        if (stats) stats.innerText = "Empty";
                     }
 
-                    // 觸發重新解析
+                    // 觸發解析
                     triggerFullProcess();
                 });
             });
-
         }
 
         // 建議提取一個統一的解析 function
