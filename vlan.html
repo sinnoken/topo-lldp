@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <title>VLAN Auditor | Network Toolbox</title>
-    <link rel="stylesheet" href="css/output.css">
+    <script src="js/vlan.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
         integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="js/vlan.js"></script>
+    <link rel="stylesheet" href="css/output.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
@@ -234,39 +234,38 @@
         </div>
     </footer>
     <script>
-        const auditor = new VlanAuditor();
+        let auditor;
+
 
         const editorConfigs = [
             { id: 'config-editor', prefix: 'config' },
             { id: 'vlan-editor', prefix: 'vlan' },
             { id: 'switch-editor', prefix: 'switch' },
             { id: 'topo-editor', prefix: 'topo' },
-            { id: 'arp-editor', prefix: 'arp' } // 新增這行
+            { id: 'arp-editor', prefix: 'arp' }
         ];
         const viewer = document.getElementById('vlan-viewer');
 
         async function init() {
-            // 增加檢查：確保 VlanAuditor 已經定義
-            if (typeof VlanAuditor === 'undefined') {
-                console.warn("VlanAuditor not ready, retrying in 100ms...");
-                setTimeout(init, 100);
-                return;
-            }
-            // 1. 立即綁定所有編輯器的事件 (這讓使用者一打開網頁就能貼上資料)
+            auditor = new VlanAuditor();
+            // 1. 設定事件監聽器
             setupEventListeners();
+            console.warn("setupEventListeners called");
 
+            // 2. 背景載入 OUI 資料庫，不使用 await 阻塞後續邏輯
+            console.log("🌐 正在初始化 OUI 資料庫...");
             try {
-                // 2. 背景載入 OUI 資料庫，不使用 await 阻塞後續邏輯
-                // 或者使用 await，但確保它在 setupEventListeners 之後
-                console.log("🌐 正在初始化 OUI 資料庫...");
+
                 await auditor.initOuiDatabase();
                 console.log("✅ OUI 資料庫已就緒");
 
-                // 3. 載入完成後，如果編輯器已經有資料，手動觸發一次解析
-                triggerFullProcess();
+
             } catch (err) {
                 console.error("OUI 初始化失敗:", err);
             }
+
+            // 3. 載入完成後，如果編輯器已經有資料，手動觸發一次解析
+            triggerFullProcess();
         }
 
         // 將原本在 init 裡的循環提取成獨立函式
@@ -306,7 +305,6 @@
         // 建議提取一個統一的解析 function
         function triggerFullProcess() {
             // 2. 觸發解析邏輯
-            // 在 init() 內部的解析邏輯後方加入
             try {
                 const result = auditor.processData(
                     document.getElementById('config-editor').value,
