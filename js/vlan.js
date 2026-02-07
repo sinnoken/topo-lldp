@@ -98,7 +98,7 @@ class VlanAuditor {
 
         try {
             console.log("🌐 Fetching OUI from CDN...");
-            const res = await fetch('js/silverwind.json', {
+            const res = await fetch('js/silverwind.oui-data.json', {
                 signal: controller.signal // 綁定超時訊號
             });
 
