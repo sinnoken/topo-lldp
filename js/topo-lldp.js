@@ -179,8 +179,49 @@ function getInitialData() {
     }
 
     return {
-        nodes: [{ id: "ER_C29_001", label: "ER_C29_001", group: "switch", value: 3 }],
-        edges: []
+        nodes: [
+            { "id": "DC1_CORE_FW_01", "label": "DC1-FW-01", "group": "firewall", "value": 9, "shape": "dot" },
+            { "id": "DC1_CORE_FW_02", "label": "DC1-FW-02", "group": "firewall", "value": 9, "shape": "dot" },
+            { "id": "DC1_CORE_SW_01", "label": "DC1-CORE-01", "group": "switch", "value": 8, "shape": "dot" },
+            { "id": "DC1_CORE_SW_02", "label": "DC1-CORE-02", "group": "switch", "value": 8, "shape": "dot" },
+            { "id": "DC2_DIST_SW_01", "label": "DC2-DIST-01", "group": "switch", "value": 7, "shape": "dot" },
+            { "id": "DC2_DIST_SW_02", "label": "DC2-DIST-02", "group": "switch", "value": 7, "shape": "dot" },
+            { "id": "DC2_SRV_PROD_01", "label": "PROD-DB-01", "group": "unknown", "value": 5, "shape": "dot" },
+            { "id": "DC2_SRV_PROD_02", "label": "PROD-APP-01", "group": "unknown", "value": 5, "shape": "dot" },
+            { "id": "DC3_DIST_SW_01", "label": "DC3-DIST-01", "group": "switch", "value": 7, "shape": "dot" },
+            { "id": "DC3_DIST_SW_02", "label": "DC3-DIST-02", "group": "switch", "value": 7, "shape": "dot" },
+            { "id": "DC3_SRV_DR_01", "label": "DR-STORAGE-01", "group": "unknown", "value": 5, "shape": "dot" },
+            { "id": "DC3_SRV_DR_02", "label": "DR-WEB-01", "group": "unknown", "value": 5, "shape": "dot" },
+            { "id": "DC4_ACC_SW_01", "label": "DC4-ACC-01", "group": "switch", "value": 6, "shape": "dot" },
+            { "id": "DC4_ACC_SW_02", "label": "DC4-ACC-02", "group": "switch", "value": 6, "shape": "dot" },
+            { "id": "DC4_DEV_NODE_01", "label": "DEV-PC-01", "group": "unknown", "value": 3, "shape": "dot" },
+            { "id": "DC4_DEV_NODE_02", "label": "DEV-PC-02", "group": "unknown", "value": 3, "shape": "dot" },
+            { "id": "DC5_ACC_SW_01", "label": "DC5-ACC-01", "group": "switch", "value": 6, "shape": "dot" },
+            { "id": "DC5_ACC_SW_02", "label": "DC5-ACC-02", "group": "switch", "value": 6, "shape": "dot" },
+            { "id": "DC5_IOT_01", "label": "OFFICE-WIFI-01", "group": "unknown", "value": 2, "shape": "dot" },
+            { "id": "DC5_IOT_02", "label": "OFFICE-PRINTER-01", "group": "unknown", "value": 2, "shape": "dot" }
+        ],
+        edges: [
+            { "from": "DC1_CORE_SW_01", "to": "DC1_CORE_SW_02", "labelFrom": "Stack", "labelTo": "Stack", "width": 5, "color": { "color": "#EF4444" } },
+            { "from": "DC1_CORE_FW_01", "to": "DC1_CORE_SW_01", "labelFrom": "p1", "labelTo": "p1", "width": 3, "color": { "color": "#3B82F6" } },
+            { "from": "DC1_CORE_FW_02", "to": "DC1_CORE_SW_02", "labelFrom": "p1", "labelTo": "p1", "width": 3, "color": { "color": "#3B82F6" } },
+            { "from": "DC1_CORE_SW_01", "to": "DC2_DIST_SW_01", "labelFrom": "xe-1/1", "labelTo": "uplink", "width": 3, "color": { "color": "#10B981" } },
+            { "from": "DC1_CORE_SW_02", "to": "DC2_DIST_SW_02", "labelFrom": "xe-1/1", "labelTo": "uplink", "width": 3, "color": { "color": "#10B981" } },
+            { "from": "DC1_CORE_SW_01", "to": "DC3_DIST_SW_01", "labelFrom": "xe-1/2", "labelTo": "uplink", "width": 3, "color": { "color": "#10B981" } },
+            { "from": "DC1_CORE_SW_02", "to": "DC3_DIST_SW_02", "labelFrom": "xe-1/2", "labelTo": "uplink", "width": 3, "color": { "color": "#10B981" } },
+            { "from": "DC2_DIST_SW_01", "to": "DC2_SRV_PROD_01", "labelFrom": "ge-0/1", "labelTo": "eth0", "width": 2, "color": { "color": "#D1D5DB" } },
+            { "from": "DC2_DIST_SW_02", "to": "DC2_SRV_PROD_02", "labelFrom": "ge-0/1", "labelTo": "eth0", "width": 2, "color": { "color": "#D1D5DB" } },
+            { "from": "DC3_DIST_SW_01", "to": "DC3_SRV_DR_01", "labelFrom": "ge-0/1", "labelTo": "eth0", "width": 2, "color": { "color": "#D1D5DB" } },
+            { "from": "DC3_DIST_SW_02", "to": "DC3_SRV_DR_02", "labelFrom": "ge-0/1", "labelTo": "eth0", "width": 2, "color": { "color": "#D1D5DB" } },
+            { "from": "DC1_CORE_SW_01", "to": "DC4_ACC_SW_01", "labelFrom": "ge-1/1", "labelTo": "up", "width": 1.5, "color": { "color": "#D1D5DB" } },
+            { "from": "DC1_CORE_SW_02", "to": "DC4_ACC_SW_02", "labelFrom": "ge-1/1", "labelTo": "up", "width": 1.5, "color": { "color": "#D1D5DB" } },
+            { "from": "DC1_CORE_SW_01", "to": "DC5_ACC_SW_01", "labelFrom": "ge-1/2", "labelTo": "up", "width": 1.5, "color": { "color": "#D1D5DB" } },
+            { "from": "DC1_CORE_SW_02", "to": "DC5_ACC_SW_02", "labelFrom": "ge-1/2", "labelTo": "up", "width": 1.5, "color": { "color": "#D1D5DB" } },
+            { "from": "DC4_ACC_SW_01", "to": "DC4_DEV_NODE_01", "labelFrom": "p10", "labelTo": "nic", "width": 1, "color": { "color": "#D1D5DB" } },
+            { "from": "DC4_ACC_SW_02", "to": "DC4_DEV_NODE_02", "labelFrom": "p10", "labelTo": "nic", "width": 1, "color": { "color": "#D1D5DB" } },
+            { "from": "DC5_ACC_SW_01", "to": "DC5_IOT_01", "labelFrom": "p20", "labelTo": "dhcp", "width": 1, "color": { "color": "#D1D5DB" } },
+            { "from": "DC5_ACC_SW_02", "to": "DC5_IOT_02", "labelFrom": "p20", "labelTo": "dhcp", "width": 1, "color": { "color": "#D1D5DB" } }
+        ]
     };
 }
 
