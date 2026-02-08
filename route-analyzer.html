@@ -36,8 +36,7 @@
                         class="text-primary">Toolbox</span></span>
             </a>
             <span class="material-symbols-outlined text-primary text-3xl font-bold">account_tree</span>
-            <span class="text-xl font-bold tracking-tight">Route Analyzer <span class="text-primary">Topology
-                    Engine</span></span>
+            <span class="text-xl font-bold tracking-tight">Route <span class="text-primary">Analyzer</span></span>
         </div>
 
         <div class="absolute left-1/2 -translate-x-1/2 flex justify-center">
@@ -52,7 +51,7 @@
                     <input type="text" id="dstIP" value="8.8.8.8"
                         class="bg-transparent text-sm w-28 mono focus:outline-none">
                 </div>
-                <button onclick="analyzer.tracePath()" class="btn btn-primary join-item border-none">
+                <button id="runBtn" class="btn btn-primary join-item border-none">
                     <span class="material-symbols-outlined">play_arrow</span>
                     Run
                 </button>
@@ -141,6 +140,25 @@
 
         const analyzer = new NetworkAnalyzer('mynetwork', NETWORK_TOPOLOGY);
         window.addEventListener('load', () => analyzer.init());
+
+        // 獲取按鈕元素
+        const runBtn = document.getElementById('runBtn');
+
+        // 綁定點擊事件
+        if (runBtn) {
+            runBtn.addEventListener('click', () => {
+                analyzer.tracePath();
+            });
+        }
+
+        // 進階建議：綁定 Enter 鍵，讓輸入完 IP 按下 Enter 也能觸發
+        [document.getElementById('srcIP'), document.getElementById('dstIP')].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    analyzer.tracePath();
+                }
+            });
+        });
     </script>
 </body>
 
