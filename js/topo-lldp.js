@@ -867,7 +867,7 @@ function initApp() {
     // 檢查是否為第一次使用 (或是瀏覽器快取已被清除)
     const hasSeenIntro = localStorage.getItem('hasSeenNetworkIntro');
     if (!hasSeenIntro) {
-        const modal = document.getElementById('usage_modal');
+        const modal = document.getElementById('usage-modal');
         if (modal) {
             modal.showModal();
             localStorage.setItem('hasSeenNetworkIntro', 'true');
