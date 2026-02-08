@@ -110,16 +110,16 @@
     <script>
         const NETWORK_TOPOLOGY = {
             nodes: [
-                { id: 'H1', label: 'HQ Host', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
+                { id: 'H1', label: 'HQ Host\n192.168.1.10', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
                 { id: 'R1', label: 'HQ Core', group: 'HQ', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '192.168.1.1', mask: 24 }, { name: 'Gig0/1', ip: '10.0.1.1', mask: 24 }, { name: 'Gig0/2', ip: '172.16.254.1', mask: 30 }, { name: 'Gig0/3', ip: '10.255.1.1', mask: 30 }], routingTable: [{ network: '10.0.1.0', mask: 24, nextHop: '10.0.1.2' }, { network: '172.16.1.0', mask: 24, nextHop: '172.16.254.2' }, { network: '10.20.1.0', mask: 24, nextHop: '10.255.1.2' }, { network: '0.0.0.0', mask: 0, nextHop: '172.16.254.2' }] },
                 { id: 'R2', label: 'DR Edge', group: 'DR', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '172.16.1.1', mask: 24 }, { name: 'Gig0/1', ip: '172.16.254.2', mask: 30 }, { name: 'Ser0/0', ip: '8.8.8.7', mask: 30 }], routingTable: [{ network: '192.168.1.0', mask: 24, nextHop: '172.16.254.1' }, { network: '8.8.8.8', mask: 32, nextHop: '8.8.8.8' }] },
-                { id: 'H2', label: 'DR Server', group: 'DR', type: 'host', ip: '172.16.1.50', mask: 24, gateway: '172.16.1.1' },
+                { id: 'H2', label: 'DR Server\n172.16.1.50', group: 'DR', type: 'host', ip: '172.16.1.50', mask: 24, gateway: '172.16.1.1' },
                 { id: 'R3', label: 'Branch Router', group: 'Branch', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.0.1.2', mask: 24 }, { name: 'Gig0/1', ip: '10.0.2.1', mask: 24 }], routingTable: [{ network: '0.0.0.0', mask: 0, nextHop: '10.0.1.1' }] },
-                { id: 'H3', label: 'Branch Host', group: 'Branch', type: 'host', ip: '10.0.1.100', mask: 24, gateway: '10.0.2.1' },
+                { id: 'H3', label: 'Branch Host\n10.0.1.100', group: 'Branch', type: 'host', ip: '10.0.1.100', mask: 24, gateway: '10.0.2.1' },
                 { id: 'R4', label: 'Transit Router', group: 'Transit', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.255.1.2', mask: 30 }, { name: 'Gig0/1', ip: '10.255.2.1', mask: 30 }], routingTable: [{ network: '10.20.1.0', mask: 24, nextHop: '10.255.2.2' }, { network: '0.0.0.0', mask: 0, nextHop: '10.255.1.1' }] },
                 { id: 'R5', label: 'TKO Edge', group: 'TKO', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.20.1.1', mask: 24 }, { name: 'Gig0/1', ip: '10.255.2.2', mask: 30 }], routingTable: [{ network: '0.0.0.0', mask: 0, nextHop: '10.255.2.1' }] },
-                { id: 'H4', label: 'TKO DB Server', group: 'TKO', type: 'host', ip: '10.20.1.200', mask: 24, gateway: '10.20.1.1' },
-                { id: 'Cloud', label: 'Public DNS', group: 'Internet', type: 'host', ip: '8.8.8.8', mask: 32, gateway: '8.8.8.7' }
+                { id: 'H4', label: 'TKO DB Server\n10.20.1.200', group: 'TKO', type: 'host', ip: '10.20.1.200', mask: 24, gateway: '10.20.1.1' },
+                { id: 'Cloud', label: 'Public DNS\n8.8.8.8', group: 'Internet', type: 'host', ip: '8.8.8.8', mask: 32, gateway: '8.8.8.7' }
             ],
             edges: [
                 { id: 'e1', from: 'H1', to: 'R1', label: 'v100', labelFrom: 'Gig0/0', labelTo: 'Gig0/4' },
