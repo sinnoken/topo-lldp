@@ -283,13 +283,19 @@ class NetworkAnalyzer {
 
     renderLogCard(curr, next, info) {
         const log = document.getElementById('log-container');
-        log.innerHTML += `
-            <div class="md-card p-3 border-l-4 border-l-blue-500 mb-2">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-[10px] font-bold text-gray-400 jetbrains">${curr}</span>
-                    <span class="status-badge ${info.badge}">${info.title}</span>
+        const cardHtml = `
+        <div class="card bg-base-200 shadow-sm border-l-4 border-primary overflow-hidden">
+            <div class="card-body p-3 gap-1">
+                <div class="flex justify-between items-center">
+                    <span class="mono text-[10px] font-bold opacity-50">${curr}</span>
+                    <span class="badge ${info.badge} badge-xs font-bold p-2">${info.title}</span>
                 </div>
-                <div class="text-sm font-medium">Next Hop → ${next}</div>
-            </div>`;
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="material-symbols-outlined text-sm opacity-50">arrow_forward</span>
+                    <span class="text-sm font-bold tracking-tight">${next}</span>
+                </div>
+            </div>
+        </div>`;
+        log.insertAdjacentHTML('beforeend', cardHtml);
     }
 }

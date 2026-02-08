@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Path Analyzer | Network Toolbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <link rel="stylesheet" href="css/output.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/10.0.2/standalone/umd/vis-network.min.js"
+        integrity="sha512-9YVQZyV2hlSqEXZDwSEVia7u4T+qBkLE7KYG24LalL3J1zoQJXAiWpobprig/vGhV1VCfPIxF4EvHDYCSrSpmw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <style>
+        #mynetwork {
+            height: 100%;
+            width: 100%;
+            outline: none;
+        }
+    </style>
+</head>
+
+<body class="h-screen bg-base-200 flex flex-col">
+
+    <nav class="navbar bg-base-100 shadow-sm px-6 h-16 flex-none">
+        <div class="flex-1 gap-2">
+            <a href="index.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span class="material-symbols-outlined text-primary text-3xl">settings_ethernet</span>
+                <span class="text-xl font-bold text-base-content">Network <span
+                        class="text-primary">Toolbox</span></span>
+            </a>
+            <div class="p-2 bg-primary rounded-lg text-primary-content">
+                <span class="material-symbols-outlined leading-none">account_tree</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold leading-none">Route Analyzer</h1>
+                <p class="text-[10px] uppercase tracking-widest opacity-50 font-bold">Topology Engine</p>
+            </div>
+        </div>
+
+        <div class="flex-none flex justify-center">
+            <div class="join shadow-sm">
+                <div class="join-item bg-base-200 px-4 flex items-center gap-2 border border-base-300">
+                    <span class="text-[10px] font-black opacity-40 uppercase">Source</span>
+                    <input type="text" id="srcIP" value="10.0.1.100"
+                        class="bg-transparent text-sm w-28 mono focus:outline-none">
+                </div>
+                <div class="join-item bg-base-200 px-4 flex items-center gap-2 border-y border-base-300">
+                    <span class="text-[10px] font-black opacity-40 uppercase">Dest</span>
+                    <input type="text" id="dstIP" value="8.8.8.8"
+                        class="bg-transparent text-sm w-28 mono focus:outline-none">
+                </div>
+                <button onclick="analyzer.tracePath()" class="btn btn-primary join-item border-none">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                    Run
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex flex-1 overflow-hidden">
+
+        <section class="flex-1 relative bg-base-300/30">
+            <div id="mynetwork"></div>
+
+            <div
+                class="absolute bottom-6 left-6 p-4 bg-base-100/90 backdrop-blur shadow-xl rounded-2xl border border-base-300 z-10">
+                <h4 class="text-[10px] font-bold opacity-50 uppercase tracking-tighter mb-2">Network Regions</h4>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#1a73e8]"></span><span
+                            class="text-xs">HQ</span></div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#f9ab00]"></span><span
+                            class="text-xs">DR</span></div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#1e8e3e]"></span><span
+                            class="text-xs">Branch</span></div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#db2777]"></span><span
+                            class="text-xs">TKO</span></div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="w-96 bg-base-100 border-l border-base-300 flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-base-200 flex items-center justify-between bg-base-50/50">
+                <h3 class="font-bold text-xs flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-lg">insights</span>
+                    ROUTING LOGS
+                </h3>
+                <div class="badge badge-outline badge-sm opacity-50 text-[10px]">V3.0</div>
+            </div>
+
+            <div id="log-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="flex flex-col items-center justify-center h-full opacity-20 text-center">
+                    <span class="material-symbols-outlined text-6xl">radar</span>
+                    <p class="text-sm font-bold uppercase tracking-widest mt-2">Ready for Trace</p>
+                </div>
+            </div>
+
+            <div class="p-4 bg-base-200/50 border-t border-base-300">
+                <div class="flex justify-between items-center text-[10px] font-bold opacity-40 uppercase">
+                    <span>Infra Status</span>
+                    <span class="text-success italic">Connected</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script src="js/route-analyzer.js"></script>
+    <script>
+        const NETWORK_TOPOLOGY = {
+            nodes: [
+                { id: 'H1', label: 'HQ Host', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
+                { id: 'R1', label: 'HQ Core', group: 'HQ', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '192.168.1.1', mask: 24 }, { name: 'Gig0/1', ip: '10.0.1.1', mask: 24 }, { name: 'Gig0/2', ip: '172.16.254.1', mask: 30 }, { name: 'Gig0/3', ip: '10.255.1.1', mask: 30 }], routingTable: [{ network: '10.0.1.0', mask: 24, nextHop: '10.0.1.2' }, { network: '172.16.1.0', mask: 24, nextHop: '172.16.254.2' }, { network: '10.20.1.0', mask: 24, nextHop: '10.255.1.2' }, { network: '0.0.0.0', mask: 0, nextHop: '172.16.254.2' }] },
+                { id: 'R2', label: 'DR Edge', group: 'DR', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '172.16.1.1', mask: 24 }, { name: 'Gig0/1', ip: '172.16.254.2', mask: 30 }, { name: 'Ser0/0', ip: '8.8.8.7', mask: 30 }], routingTable: [{ network: '192.168.1.0', mask: 24, nextHop: '172.16.254.1' }, { network: '8.8.8.8', mask: 32, nextHop: '8.8.8.8' }] },
+                { id: 'H2', label: 'DR Server', group: 'DR', type: 'host', ip: '172.16.1.50', mask: 24, gateway: '172.16.1.1' },
+                { id: 'R3', label: 'Branch Router', group: 'Branch', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.0.1.2', mask: 24 }, { name: 'Gig0/1', ip: '10.0.2.1', mask: 24 }], routingTable: [{ network: '0.0.0.0', mask: 0, nextHop: '10.0.1.1' }] },
+                { id: 'H3', label: 'Branch Host', group: 'Branch', type: 'host', ip: '10.0.1.100', mask: 24, gateway: '10.0.2.1' },
+                { id: 'R4', label: 'Transit Router', group: 'Transit', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.255.1.2', mask: 30 }, { name: 'Gig0/1', ip: '10.255.2.1', mask: 30 }], routingTable: [{ network: '10.20.1.0', mask: 24, nextHop: '10.255.2.2' }, { network: '0.0.0.0', mask: 0, nextHop: '10.255.1.1' }] },
+                { id: 'R5', label: 'TKO Edge', group: 'TKO', type: 'router', interfaces: [{ name: 'Gig0/0', ip: '10.20.1.1', mask: 24 }, { name: 'Gig0/1', ip: '10.255.2.2', mask: 30 }], routingTable: [{ network: '0.0.0.0', mask: 0, nextHop: '10.255.2.1' }] },
+                { id: 'H4', label: 'TKO DB Server', group: 'TKO', type: 'host', ip: '10.20.1.200', mask: 24, gateway: '10.20.1.1' },
+                { id: 'Cloud', label: 'Public DNS', group: 'Internet', type: 'host', ip: '8.8.8.8', mask: 32, gateway: '8.8.8.7' }
+            ],
+            edges: [
+                { id: 'e1', from: 'H1', to: 'R1', label: 'v100', labelFrom: 'Gig0/0', labelTo: 'Gig0/4' },
+                { id: 'e2', from: 'R1', to: 'R2', label: 'v200', labelFrom: 'Gig0/1', labelTo: 'Gig0/5' },
+                { id: 'e7', from: 'R1', to: 'R4', label: 'v300', labelFrom: 'Gig0/2', labelTo: 'Gig0/6' },
+                { id: 'e4', from: 'R3', to: 'R1', label: 'VPN', labelFrom: 'Gig0/3', labelTo: 'Gig0/7', dashes: true },
+                { id: 'e3', from: 'R2', to: 'H2', label: 'Gig0/0' },
+                { id: 'e6', from: 'R2', to: 'Cloud', label: 'Ser0/0' },
+                { id: 'e8', from: 'R2', to: 'R4', label: 'Backup' },
+                { id: 'e5', from: 'R3', to: 'H3', label: 'Gig0/1' },
+                { id: 'e9', from: 'R4', to: 'R5', label: 'Global' },
+                { id: 'e10', from: 'R5', to: 'H4', label: 'Gig0/0' }
+            ],
+            colors: {
+                'HQ': '#1a73e8', 'DR': '#f9ab00', 'Branch': '#1e8e3e',
+                'Transit': '#9333ea', 'TKO': '#db2777', 'Internet': '#5f6368'
+            }
+        };
+
+        const analyzer = new NetworkAnalyzer('mynetwork', NETWORK_TOPOLOGY);
+        window.addEventListener('load', () => analyzer.init());
+    </script>
+</body>
+
+</html>
