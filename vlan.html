@@ -254,7 +254,7 @@
             auditor = new VlanAuditor();
             // 1. 設定事件監聽器
             setupEventListeners();
-            console.warn("setupEventListeners called");
+            console.log("setupEventListeners called");
 
             // 2. 背景載入 OUI 資料庫，不使用 await 阻塞後續邏輯
             console.log("🌐 正在初始化 OUI 資料庫...");

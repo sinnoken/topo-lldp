@@ -94,11 +94,11 @@ class VlanAuditor {
 
         // 2. 方案 B：設定 Fetch 超時控制 (AbortController)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 設定 5 秒超時
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 設定 5 秒超時
 
         try {
             console.log("🌐 Fetching OUI from CDN...");
-            const res = await fetch('/js/silverwind.oui-data.json', {
+            const res = await fetch('js/silverwind.oui-data.json', {
                 signal: controller.signal // 綁定超時訊號
             });
             console.log("Response Status:", res.status); // 確認是不是 200
@@ -135,7 +135,7 @@ class VlanAuditor {
             } else {
                 console.warn("⚠️ OUI 載入失敗 (無網路或 CORS 限制)");
             }
-
+            console.log("✅ OUI Database 最終備案：使用基礎清單");
             // 最終備案：使用基礎清單
             this.globalOuiData = {
                 "005056": "VMware",
