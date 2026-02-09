@@ -361,6 +361,7 @@ class VlanAuditor {
                             id: virtualPeerId,
                             label: `${iface.description || "Unknown"}\n(${isEdge ? vendor : 'MACs: ' + iface.mac_count})`,
                             group: iface.mac_count === 0 ? "NoTraffic" : (isEdge ? "EdgeNode" : "Unknown"),
+                            // shape: isEdge ? "dot" : "diamond"
                             // --- 修改部分 ---
                             shape: isEdge ? "circularImage" : "diamond",
                             image: isEdge ? this._generateInitialAvatarSvgForVis(vendor || "Unknown") : undefined,
