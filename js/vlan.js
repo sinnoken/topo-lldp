@@ -138,12 +138,29 @@ class VlanAuditor {
             console.log("✅ OUI Database 最終備案：使用基礎清單");
             // 最終備案：使用基礎清單
             this.globalOuiData = {
-                "005056": "VMware",
-                "0010DB": "Juniper",
-                "00000C": "Cisco",
-                "000142": "Cisco",
-                "000C29": "VMware",
-                "F8C288": "HPE"
+                "00045F": "Avalue", "00090F": "Fortinet", "0010DB": "Juniper",
+                "001380": "Cisco", "001E0B": "HPE", "00237D": "HPE", "00262D": "Wistron",
+                "009C02": "HPE", "0005": "TEKNOR MICROSYSTEME", "006CA": "Cisco", "00023": "INFORTREND",
+                "0002B": "Extreme", "04421A": "ASUSTek COMPUTER", "04590": "Fortinet", "10BF48": "ASUSTek COMPUTER",
+                "10376": "Cisco", "1420": "Cisco", "1C98EC": "HPE", "246E96": "Dell",
+                "286F7F": "Cisco", "2C44FD": "HPE", "2C4C15": "Juniper", "2C600C": "Quanta Computer",
+                "2CEA7F": "Dell", "34936F": "Juniper", "38FDF8": "Cisco", "3C13CC": "Cisco",
+                "3C8C93": "Juniper", "4049F": "Cisco", "4C017": "Cisco", "4C6D58": "Juniper", "5800BB": "Juniper",
+                "5C710D": "Cisco", "60EB69": "Quanta Computer", "68ED57": "Juniper", "6838E": "Juniper", "6C6C3": "Cisco", "6C92CF": "Broadcom",
+                "6CFE54": "Intel", "74786": "Fortinet", "78AC44": "Dell",
+                "7C2064": "Alcatel-Lucent", "7C2586": "Juniper", "801844": "Dell", "80248F": "Cisco", "883037": "Juniper",
+                "889471": "Brocade Communications", "8C445": "Cisco", "8C903": "Nokia", "8C941F": "Cisco",
+                "9011C": "Dell", "94575": "HPE", "94392": "Fortinet", "947AD": "Juniper", "9C5A80": "Juniper", "031": "HPE",
+                "AC162D": "HPE", "AC1F6B": "Super Micro Computer", "AC712E": "Fortinet", "07B25": "Dell", "41678": "Juniper",
+                "48351": "Intel", "495D": "Juniper", "8AC6F": "Dell",
+                "8253": "Juniper", "8CA3A": "Dell", "8015": "Juniper",
+                "BC4A56": "Cisco", "BC97E1": "Broadcom", "BCD295": "Cisco",
+                "0420": "Juniper", "0470E": "Dell", "4CBE1": "Dell", "81F66": "Dell",
+                "84B6": "Dell", "8995": "Juniper", "CCD342": "Cisco", "007CA": "Juniper",
+                "0815": "Juniper", "8122": "Juniper", "069BA": "Cisco",
+                "43D1A": "Broadcom", "431": "Cisco", "427C": "Juniper",
+                "4FC82": "Juniper", "81CBA": "Fortinet", "EC2A72": "Dell",
+                "40270": "Dell", "4739": "Juniper", "8650": "Cisco", "FC3497": "ASUSTek COMPUTER"
             };
         }
     }
@@ -325,14 +342,14 @@ class VlanAuditor {
                 if (e.to && e.labelTo) mappedPorts.add(`${e.to}|${e.labelTo.split('.')[0]}`);
             });
 
-            // 節點整合：合併拓樸定義與 SNMP 解析資料
+            // 節點整合：合併拓樸定義與 LLDP 解析資料
             finalNodes = topo.nodes && topo.nodes.length > 0
                 ? topo.nodes.map(tn => ({ ...tn, ...(nodeLookup.get(tn.id) || {}) }))
                 : [...processedNodes];
 
             let allEdges = [...(topo.edges || [])];
 
-            // 自動補全邏輯：處理 SNMP 有資料但拓樸未定義的連線
+            // 自動補全邏輯：處理 LLDP 有資料但拓樸未定義的連線
             processedNodes.forEach(n => {
                 n.interfaces_detail.forEach(iface => {
                     if (iface.status === 'up' && !iface.parent && iface.type === 'physical' && !mappedPorts.has(`${n.id}|${iface.name}`)) {
@@ -344,7 +361,10 @@ class VlanAuditor {
                             id: virtualPeerId,
                             label: `${iface.description || "Unknown"}\n(${isEdge ? vendor : 'MACs: ' + iface.mac_count})`,
                             group: iface.mac_count === 0 ? "NoTraffic" : (isEdge ? "EdgeNode" : "Unknown"),
-                            shape: isEdge ? "dot" : "diamond"
+                            // --- 修改部分 ---
+                            shape: isEdge ? "circularImage" : "diamond",
+                            image: isEdge ? this._generateInitialAvatarSvgForVis(vendor || "Unknown") : undefined,
+                            // ----------------
                         });
                         allEdges.push({ from: n.id, to: virtualPeerId, labelFrom: iface.name, dashes: true, isMissing: true });
                     }
@@ -459,5 +479,26 @@ class VlanAuditor {
         ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 50 }];
         XLSX.utils.book_append_sheet(wb, ws, "Audit");
         XLSX.writeFile(wb, `Audit_${Date.now()}.xlsx`);
+    }
+
+    // 請加入 VlanAuditor 類別中
+    _generateInitialAvatarSvgForVis(name) {
+        const initials = name.substring(0, 2).toUpperCase();
+        const colors = ['#1abc9c', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', '#34495e', '#2ecc71'];
+        const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const bgColor = colors[hash % colors.length];
+
+        // 關鍵：明確加上 width 和 height
+        const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="50" fill="${bgColor}" />
+            <text x="50" y="50" text-anchor="middle" fill="white" 
+                  font-family="Arial, sans-serif" font-weight="bold" font-size="45" 
+                  dominant-baseline="central">${initials}</text>
+        </svg>
+        `.trim();
+
+        // 這種方式比 btoa 更快，且 vis.js 支援度很好
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     }
 }
