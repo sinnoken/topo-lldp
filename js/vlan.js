@@ -297,9 +297,12 @@ class VlanAuditor {
             }
         });
 
-        // --- 4. 第四階段：Topology 拓樸關聯與自動補全 (核心缺失部分) ---
+        // --- 4. 第四階段：Topology 拓樸關聯與自動補全 (優化整合版) ---
         const processedNodes = nodes.map(n => ({
             id: n.id, ip: n.ip,
+            // 為了後續 lookup，這裡保留原始的 vlanMap 引用（非必要，但能簡化染色邏輯）
+            _rawVlanMap: n.vlanMap,
+            _rawAeMap: n.aeMap,
             vlans: Object.values(n.vlanMap).map(v => ({
                 id: v.id, name: v.name, description: v.description,
                 mac_count: v.macs.size, mac_list: Array.from(v.macs), interfaces: Array.from(v.interfaceNames)
@@ -313,29 +316,34 @@ class VlanAuditor {
         let finalEdges = [];
         try {
             const topo = JSON.parse(topoText || '{"nodes":[], "edges":[]}');
+            // 使用 Map 進行快速節點索引
             const nodeLookup = new Map(processedNodes.map(n => [n.id, n]));
             const mappedPorts = new Set();
+
             (topo.edges || []).forEach(e => {
                 if (e.from && e.labelFrom) mappedPorts.add(`${e.from}|${e.labelFrom.split('.')[0]}`);
                 if (e.to && e.labelTo) mappedPorts.add(`${e.to}|${e.labelTo.split('.')[0]}`);
             });
 
-            finalNodes = topo.nodes && topo.nodes.length > 0 ? topo.nodes.map(tn => ({ ...tn, ...(nodeLookup.get(tn.id) || {}) })) : [...processedNodes];
+            // 節點整合：合併拓樸定義與 SNMP 解析資料
+            finalNodes = topo.nodes && topo.nodes.length > 0
+                ? topo.nodes.map(tn => ({ ...tn, ...(nodeLookup.get(tn.id) || {}) }))
+                : [...processedNodes];
+
             let allEdges = [...(topo.edges || [])];
 
-            // 自動補全邏輯
+            // 自動補全邏輯：處理 SNMP 有資料但拓樸未定義的連線
             processedNodes.forEach(n => {
                 n.interfaces_detail.forEach(iface => {
                     if (iface.status === 'up' && !iface.parent && iface.type === 'physical' && !mappedPorts.has(`${n.id}|${iface.name}`)) {
                         const virtualPeerId = `Peer_of_${n.id}_${iface.name}`;
-                        const macCount = iface.mac_count;
-                        const isEdge = macCount === 1;
+                        const isEdge = iface.mac_count === 1;
                         const vendor = isEdge ? this.getVendor(iface.mac_list[0]) : "";
 
                         finalNodes.push({
                             id: virtualPeerId,
-                            label: `${iface.description || "Unknown"}\n(${isEdge ? vendor : 'MACs: ' + macCount})`,
-                            group: macCount === 0 ? "NoTraffic" : (isEdge ? "EdgeNode" : "Unknown"),
+                            label: `${iface.description || "Unknown"}\n(${isEdge ? vendor : 'MACs: ' + iface.mac_count})`,
+                            group: iface.mac_count === 0 ? "NoTraffic" : (isEdge ? "EdgeNode" : "Unknown"),
                             shape: isEdge ? "dot" : "diamond"
                         });
                         allEdges.push({ from: n.id, to: virtualPeerId, labelFrom: iface.name, dashes: true, isMissing: true });
@@ -343,19 +351,40 @@ class VlanAuditor {
                 });
             });
 
-            // 染色與 VLAN ID 標記
+            // --- 核心改進點：雙向 VLAN 染色與標記 ---
             finalEdges = allEdges.map(edge => {
-                const vlanIdSet = new Set();
+                const vlanIdSet = new Set(); // 用於合併兩端端點的 VLAN ID
+
+                /**
+                 * 內部檢查工具：利用 nodeLookup 快速查找 VLAN
+                 */
                 const check = (nodeId, label) => {
                     const node = nodeLookup.get(nodeId);
                     if (!node || !label) return;
-                    const targetIface = node.aeMap?.[label.split('.')[0]] || label.split('.')[0];
-                    node.vlans.forEach(v => { if (v.interfaces.includes(targetIface)) vlanIdSet.add(v.id); });
+
+                    // 1. 端口標準化：處理子介面並透過 aeMap 轉為邏輯端口 (如 AE1)
+                    const pureIface = label.split('.')[0];
+                    const targetIface = node._rawAeMap?.[pureIface] || pureIface;
+
+                    // 2. 利用原始資料結構中的 interfaceNames (Set) 進行 O(1) 快速比對
+                    Object.values(node._rawVlanMap).forEach(v => {
+                        if (v.interfaceNames.has(targetIface)) {
+                            vlanIdSet.add(v.id);
+                        }
+                    });
                 };
+
+                // 執行雙向檢查 (符合 A->B, B->A 都要標示的需求)
                 check(edge.from, edge.labelFrom);
                 check(edge.to, edge.labelTo);
+
                 const ids = Array.from(vlanIdSet).sort((a, b) => a - b);
-                return { ...edge, label: `vlan: ${ids.join(',')}${edge.label ? ' ' + edge.label : ''}`, vlan_ids: ids };
+
+                return {
+                    ...edge,
+                    vlan_ids: ids,
+                    label: `vlan: ${ids.join(',')}${edge.label ? ' ' + edge.label : ''}`
+                };
             });
 
         } catch (e) {
