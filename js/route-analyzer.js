@@ -36,17 +36,17 @@ class NetworkAnalyzer {
         const options = {
             groups: this.generateGroupsConfig(),
             nodes: {
-                shape: 'box',
-                borderWidth: 1.5,
+                shape: 'dot',
+                borderWidth: 1,
                 size: 20,
-                font: { color: '#3c4043', size: 12, face: 'Google Sans' },
+                font: { color: '#3c4043', size: 10 },
                 color: { background: '#ffffff', border: '#dadce0' }
             },
             edges: {
                 arrows: 'to',
-                width: 1.5,
-                color: { color: '#dadce0', highlight: '#8ab4f8' },
-                font: { size: 10, color: '#70757a', face: 'Roboto Mono' },
+                width: 1,
+                color: { color: '#dddddd', highlight: '#00ff00' },
+                font: { size: 4, color: '#7a7a7a' },
                 smooth: { type: 'curvedCW', roundness: 0.1 }
             },
             physics: {
@@ -159,7 +159,7 @@ class NetworkAnalyzer {
 
         ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 3;
         this._drawRoundedRect(ctx, -w / 2 - pH, -h / 2, w + pH * 2, h, 3);
         ctx.fill();
 
@@ -272,11 +272,11 @@ class NetworkAnalyzer {
     }
 
     applyHighlight(pNodes, pEdges) {
-        pEdges.forEach(eid => this.edges.update({ id: eid, color: { color: '#1a73e8' }, width: 4 }));
+        pEdges.forEach(eid => this.edges.update({ id: eid, color: { color: '#0400ff' }, width: 3 }));
         pNodes.forEach(nid => this.nodes.update({
             id: nid,
-            borderWidth: 3,
-            shadow: { enabled: true, color: 'rgba(26,115,232,0.5)' }
+            borderWidth: 2,
+            shadow: { enabled: true, color: 'rgba(0, 110, 255, 0.5)' }
         }));
         setTimeout(() => this.network.fit({ nodes: pNodes, animation: { duration: 500 } }), 100);
     }
