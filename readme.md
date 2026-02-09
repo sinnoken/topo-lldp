@@ -1,91 +1,45 @@
-# LLDP Topology Viewer User Manual
+# Network Topology & Route Analysis Toolkit
 
 > **Languages: [English] | [繁體中文](readme.zh-TW.md)**
 
-Developed using **Vis.js**, this tool transforms complex network connection data (LLDP/OSPF) into intuitive, interactive 2D/3D topology maps.
+This toolkit is designed to transform raw network device data from vendors like **Juniper, Cisco, and Fortinet** into interactive, insightful visualizations and professional management reports.
 
-## 1. Core Logic Overview
+## 🚀 Core Features
 
-The system, powered by `topo-lldp.js`, operates through three primary stages:
+### 1. Smart Topology Visualization
+*   **Multi-vendor Parsing**: Supports parsing of Juniper OSPF output, Fortinet/Cisco OSPF tables, and standard LLDP neighbor tables.
+*   **Automated Device Identification**: Uses regex (regular expressions) to automatically categorize devices (e.g., Firewalls, Switches) and assign specific SVG icons based on naming conventions.
+*   **Dynamic Layout Engine**: Utilizes the **vis.js ForceAtlas2 algorithm** to calculate optimal spatial positioning, preventing node overlap and offering static, hierarchical, or physics-based views.
 
-### 🔍 Data Parsing & Transformation (`convertLldpToJson`)
+### 2. Recursive Route Analysis Engine
+*   **LPM (Longest Prefix Match)**: Accurately simulates router behavior by finding the most specific route entry for a target IP within CIDR routing tables.
+*   **Recursive Path Tracing**: Simulates packet hops from a starting node until the packet reaches its destination, encounters a routing loop, or hits a "blackhole".
+*   **ECMP Support**: Identifies and displays all available branches when multiple Equal-Cost Multi-Path (ECMP) next-hops exist.
 
-* **Multi-Format Support**: The parser handles **Juniper OSPF**, **Fortinet/Cisco OSPF**, and standard **LLDP** text outputs.
-* **Automated Device Classification**: Uses `CONFIG.GROUP_RULES` (Regex) to identify device types:
-* `FGT/FG`: Identified as **Firewall** (Green shield icon).
-* Specific naming patterns: Identified as **Switch** (Orange switch icon).
-* `DESKTOP/PC`: Identified as **Windows** terminal.
+### 3. Asset & VLAN Auditing
+*   **IP-MAC Correlation**: Maps ARP data to port information to solve the common challenge of identifying the identity of a device on a specific interface.
+*   **OUI Manufacturer Identification**: Automatically detects hardware vendors (e.g., Apple, Cisco, VMware) using the first 6 characters of MAC addresses to help classify terminal devices.
+*   **Automated Reporting**: Flattens complex, nested JSON data into clean **Excel (XLSX)** or **CSV** reports with optimized column formatting for auditing.
 
+## 🛠️ How It Works
 
-* **Smart Port Styling**: Matches `CONFIG.PORT_STYLES` to color-code links. For example, `ae` prefixes indicate **Aggregate Links** (thick blue lines), while `10G/40G` represent **High-Speed Links** (red lines).
+1.  **Data Normalization**: Extracts destination segments and next-hops via regex and standardizes MAC address formats for consistent global mapping.
+2.  **Physics Simulation**: Employs gravitational and spring forces to create natural network distributions that prevent visual clutter.
+3.  **Visual Status Marking**: Highlighting analyzed paths with dynamic "flow" effects and labeling each node with the specific route entry used for forwarding.
+4.  **Persistence & Caching**: Integrates with **localStorage** to remember node positions and settings, featuring an 8-hour cache expiry to balance performance and data accuracy.
 
-### 🎨 Layout & Rendering Modes (`toggleLayoutMode`)
+## 💡 Use Cases
 
-* **Static**: Loads coordinates from `localStorage` to maintain a manually organized layout.
-* **Hierarchy**: Automatically arranges devices based on network flow (Upstream/Downstream).
-* **Physics Engine (ForceAtlas2)**: Simulates physical repulsion to spread nodes apart, preventing overlap in complex networks.
+*   **Virtual Traceroute**: Predict packet paths offline when devices are unreachable or ICMP traffic is blocked by intermediate firewalls.
+*   **Datacenter Automation**: Instantly generate physical connection maps by pasting `show lldp neighbors` text, replacing manual Visio drafting.
+*   **Security & Asset Inventory**: Identify unauthorized devices and audit virtualization environments (like VMware/Hyper-V) using OUI detection.
+*   **Disaster Recovery (DR) Drills**: Simulate node failures or routing weight changes to verify if traffic correctly shifts to backup paths.
+*   **VLAN Migration Planning**: Generate a comprehensive list of all devices on a specific VLAN to ensure no critical servers are missed during network migrations.
 
-### 💾 Interaction Features
-
-* **Double-Click Propagation**: Double-clicking a node selects neighbors based on "Selection Depth" and **automatically copies the resulting JSON** to the clipboard for easy sub-topology extraction.
-* **Persistent Storage**: Node coordinates and data are cached in the browser with an **8-hour expiry**.
-
----
-
-## 2. Data Format Guide (`sample.json`)
-
-To render custom topologies, you can provide data in the following JSON structure:
-
-### Sample Code
-
-```json
-{
-    "nodes": [
-        {
-            "id": "CORE-SW-01",
-            "label": "CORE-SW-01",
-            "group": "switch"
-        },
-        {
-            "id": "FGT-EXT-01",
-            "label": "FGT-EXT-01",
-            "group": "firewall"
-        }
-    ],
-    "edges": [
-        {
-            "from": "CORE-SW-01",
-            "to": "FGT-EXT-01",
-            "labelFrom": "ge-0/0/1",
-            "labelTo": "port1",
-            "width": 3,
-            "color": { "color": "#EF4444" }
-        }
-    ]
-}
-
-```
-
-### Field Definitions
-
-* **Nodes**:
-* `id`: Unique identifier used for searching and link mapping.
-* `group`: Assigns visual styles (e.g., `switch`, `firewall`, `server`, `windows`, `endpoint`).
-
-
-* **Edges**:
-* `from / to`: Defines the IDs of the two connected nodes.
-* `labelFrom / labelTo`: Labels the physical port names on each end.
-* `width`: Line thickness (Suggested: `3-4` for backbone, `1.5` for standard links).
-* `color`: Hex code or object defining the link color.
-
-
+## 📊 Technical Specifications
+*   **Core Engine**: JavaScript, vis.js (Physics-based rendering).
+*   **Data Models**: JSON, CIDR-based routing, Regex-driven parsing.
+*   **Export Formats**: Interactive Web Interface, PNG images, CSV, and formatted Excel files.
 
 ---
-
-## 3. Advanced Tips
-
-1. **Instant Import**: Paste raw `show lldp neighbors` logs directly into the "Raw Data" area; the tool will parse it into JSON automatically.
-2. **Search & Focus**: Use the search bar to find specific devices; the camera will auto-zoom and highlight the target node.
-3. **Position Saving**: Dragging nodes triggers an automatic save of coordinates, ensuring your layout persists after a refresh.
-4. **Export PNG**: Click **Export PNG** to download a high-resolution map; the tool calculates the optimal canvas size automatically.
+*This toolkit bridges the gap between raw low-level data and high-value management information, serving as an ideal assistant for Network Engineers and NOC centers.*
