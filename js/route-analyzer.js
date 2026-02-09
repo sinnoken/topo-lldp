@@ -1,5 +1,5 @@
 /**
- * route.js - 整合 labelFrom/labelTo 功能版
+ * NetworkAnalyzer - 整合 DataView 與 Custom Labels 版
  */
 class NetworkAnalyzer {
     constructor(containerId, config) {
@@ -11,74 +11,112 @@ class NetworkAnalyzer {
         this.nodes = null;
         this.edges = null;
         this.network = null;
+        this.nodesView = null;
     }
 
     init() {
         const container = document.getElementById(this.containerId);
 
-        this.nodes = new vis.DataSet(this.nodesRaw.map(n => ({
-            ...n,
-            shape: n.type === 'router' ? 'dot' : 'box',
-            font: { color: '#3c4043', size: 10, face: 'Google Sans' },
-            color: {
-                background: '#ffffff',
-                border: this.colorConfig[n.group] || '#dadce0'
-            },
-            borderWidth: 2,
-            size: 10
-        })));
+        // 1. 初始化原始數據池 (DataSet)
+        this.nodes = new vis.DataSet(this.nodesRaw);
+        this.edges = new vis.DataSet(this.edgesRaw);
 
-        this.edges = new vis.DataSet(this.edgesRaw.map(e => ({
-            ...e,
-            font: { size: 5, color: '#70757a', face: 'Roboto Mono' },
-            color: { color: '#dadce0' },
-            arrows: 'to',
-            width: 1,
-            smooth: { type: 'curvedCW', roundness: 0.1 }
-        })));
+        // 2. 建立數據視圖 (DataView) —— 處理邏輯映射
+        this.nodesView = new vis.DataView(this.nodes, {
+            map: (item) => {
+                return {
+                    ...item,
+                    // 如果 type 是 router，自動指派到 router 群組
+                    group: item.type === 'router' ? 'router' : item.group
+                };
+            }
+        });
 
+        // 3. 設定繪圖選項 (抽離樣式邏輯)
         const options = {
-            physics: { enabled: true, solver: 'forceAtlas2Based' },
-            interaction: { hover: true }
+            groups: this.generateGroupsConfig(),
+            nodes: {
+                shape: 'box',
+                borderWidth: 1.5,
+                size: 20,
+                font: { color: '#3c4043', size: 12, face: 'Google Sans' },
+                color: { background: '#ffffff', border: '#dadce0' }
+            },
+            edges: {
+                arrows: 'to',
+                width: 1.5,
+                color: { color: '#dadce0', highlight: '#8ab4f8' },
+                font: { size: 10, color: '#70757a', face: 'Roboto Mono' },
+                smooth: { type: 'curvedCW', roundness: 0.1 }
+            },
+            physics: {
+                enabled: true,
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: {
+                    gravitationalConstant: -50,
+                    centralGravity: 0.01,
+                    springLength: 100,
+                    springConstant: 0.08
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                navigationButtons: true
+            }
         };
 
+        // 4. 啟動 Network
         this.network = new vis.Network(container, {
-            nodes: this.nodes,
+            nodes: this.nodesView,
             edges: this.edges
         }, options);
 
-        // --- 核心整合：監聽繪製事件 ---
+        // 5. 核心：掛載自定義標籤渲染與事件
         this.network.on("afterDrawing", (ctx) => {
             this.renderCustomLabels(ctx);
         });
 
-        window.addEventListener('resize', () => this.network.fit());
+        window.addEventListener('resize', this.handleResize.bind(this));
     }
 
+    // 輔助：處理視窗縮放
+    handleResize() {
+        if (this.network) {
+            this.network.fit();
+        }
+    }
+
+    // 輔助：生成群組配置
+    generateGroupsConfig() {
+        const groups = {};
+        Object.keys(this.colorConfig).forEach(key => {
+            groups[key] = {
+                color: { border: this.colorConfig[key] },
+                shape: key === 'router' ? 'dot' : 'box'
+            };
+        });
+        return groups;
+    }
+
+    // --- 自定義標籤渲染核心 ---
     renderCustomLabels(ctx) {
         const allEdges = this.network.body.edges;
-        // 1. 一次性取得所有原始資料，避免在迴圈中重覆呼叫 get(id)
-        const rawEdgesData = this.edges.get();
+        const rawEdgesData = this.edges.get(); // 取得包含 labelFrom/To 的原始資料
 
         rawEdgesData.forEach(rawData => {
-            const id = rawData.id;
-            const edge = allEdges[id];
-
-            // 檢查 edge 是否存在於畫面上 (vis.js 可能因過濾或延遲未渲染)
+            const edge = allEdges[rawData.id];
             if (!edge) return;
 
             const { labelFrom, labelTo } = rawData;
             const isHover = edge.hover;
 
-            // 2. 只有在需要繪製標籤時才計算昂貴的屬性
             if (labelFrom || labelTo || isHover) {
                 const viaNode = edge.edgeType.getViaNode();
 
                 if (labelFrom || labelTo) {
-                    const { font, selected } = edge.options; // 解構常用屬性
-
+                    const { font } = edge.options;
                     ctx.save();
-                    // 3. 預先設定好共用狀態
                     ctx.font = `${edge.selected ? 'bold' : ''} ${font.size}px ${font.face}`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -89,7 +127,7 @@ class NetworkAnalyzer {
                     ctx.restore();
                 }
 
-                // 處理 Hover 置頂
+                // 處理 Hover 時的原生 Label 置頂
                 if (isHover) {
                     edge.drawLabel(ctx, viaNode);
                 }
@@ -98,53 +136,36 @@ class NetworkAnalyzer {
     }
 
     _drawSingleLabel(ctx, edge, text, percentage, viaNode) {
-        // 取得基礎百分比位置
         let pt = edge.edgeType.getPoint(percentage, viaNode);
-
-        // 穩健性檢查：若點位無效則跳過
         if (!pt || isNaN(pt.x)) return;
 
-        const from = edge.from;
-        const to = edge.to;
-
-        // 計算向量與角度
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
+        const dx = edge.to.x - edge.from.x;
+        const dy = edge.to.y - edge.from.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // 如果線條太短，自動調整百分比，避免標籤重疊節點
         if (distance < 50) {
-            if (percentage < 0.5) percentage = 0.3;
-            else percentage = 0.7;
-            pt = edge.edgeType.getPoint(percentage, viaNode);
+            pt = edge.edgeType.getPoint(percentage < 0.5 ? 0.3 : 0.7, viaNode);
         }
 
         let angle = Math.atan2(dy, dx);
-        // 確保文字方向始終易於閱讀 (不倒立)
         if (angle < -Math.PI / 2 || angle > Math.PI / 2) angle += Math.PI;
 
         ctx.save();
         ctx.translate(pt.x, pt.y);
         ctx.rotate(angle);
 
-        // 繪製半透明膠囊背景
-        const paddingH = 4;
-        const paddingV = 2;
         const metrics = ctx.measureText(text);
-        const w = metrics.width;
-        const h = 12; // 調整為適合閱讀的高度
+        const w = metrics.width, h = 12, pH = 4;
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         ctx.shadowColor = 'rgba(0,0,0,0.1)';
         ctx.shadowBlur = 4;
-
-        this._drawRoundedRect(ctx, -w / 2 - paddingH, -h / 2, w + paddingH * 2, h, 3);
+        this._drawRoundedRect(ctx, -w / 2 - pH, -h / 2, w + pH * 2, h, 3);
         ctx.fill();
 
-        // 移除陰影再畫文字，保持清晰
         ctx.shadowBlur = 0;
         ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
-        ctx.fillText(text, 0, 1); // 微調 y 軸偏移使其垂直居中
+        ctx.fillText(text, 0, 1);
         ctx.restore();
     }
 
@@ -158,39 +179,30 @@ class NetworkAnalyzer {
         ctx.closePath();
     }
 
-    /**
-     * route.js - 段落 2: 路由計算核心
-     */
-
-    // IP 轉長整數，便於遮罩運算
+    // --- 路由分析邏輯 ---
     ipToLong(ip) {
         return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
     }
 
-    // 判斷 IP 是否屬於特定網段 (LPM 基礎)
     isIpMatch(targetIP, networkIP, maskLen) {
-        if (maskLen === 0) return true; // Default Route 0.0.0.0/0
+        if (maskLen === 0) return true;
         const mask = (0xFFFFFFFF << (32 - maskLen)) >>> 0;
         return (this.ipToLong(targetIP) & mask) === (this.ipToLong(networkIP) & mask);
     }
 
-    // 視覺重置：將所有節點與線條恢復原狀
     resetVisualization() {
         this.edges.update(this.edgesRaw.map(e => ({
             id: e.id,
             color: { color: '#dadce0' },
             width: 1.5
         })));
-
         this.nodes.update(this.nodesRaw.map(n => ({
             id: n.id,
             borderWidth: 1.5,
             shadow: { enabled: false }
         })));
     }
-    /**
-     * route.js - 段落 3: 路徑分析與視覺強化
-     */
+
     tracePath() {
         const srcIP = document.getElementById('srcIP').value;
         const dstIP = document.getElementById('dstIP').value;
@@ -216,7 +228,6 @@ class NetworkAnalyzer {
             let nextHopIP = null;
             let logInfo = { title: "Routing", badge: "bg-gray-100" };
 
-            // 路由邏輯判斷 (Host 閘道或 Router 查表)
             if (current.type === 'host') {
                 nextHopIP = current.gateway;
                 logInfo = { title: "Gateway", badge: "bg-indigo-100 text-indigo-700" };
@@ -240,51 +251,40 @@ class NetworkAnalyzer {
             }
 
             if (nextHopIP) {
-                // 尋找下一個設備節點
                 const nextNode = this.nodesRaw.find(n => n.ip === nextHopIP || (n.interfaces?.some(i => i.ip === nextHopIP)));
                 if (nextNode) {
                     this.renderLogCard(current.id, nextNode.id, logInfo);
-
-                    // 關鍵修正：精準匹配 Edge ID
                     const edge = this.edgesRaw.find(e =>
                         (e.from === current.id && e.to === nextNode.id) ||
                         (e.to === current.id && e.from === nextNode.id)
                     );
-
                     if (edge) pathEdges.push(edge.id);
                     pathNodes.push(nextNode.id);
                     current = nextNode;
-                } else { break; }
-            } else { break; }
+                } else break;
+            } else break;
         }
 
-        // 最後檢查是否抵達終點並上色
         if (current && current.ip === dstIP) {
             log.insertAdjacentHTML('afterbegin', `<div class="p-3 bg-blue-600 text-white rounded text-xs font-bold mb-2 text-center">Trace Successful</div>`);
         }
-
         this.applyHighlight(pathNodes, pathEdges);
     }
 
-    // 執行視覺強化：修正後的 update 語法
     applyHighlight(pNodes, pEdges) {
-        pEdges.forEach(eid => {
-            this.edges.update({ id: eid, color: { color: '#1a73e8' }, width: 4 });
-        });
-        pNodes.forEach(nid => {
-            this.nodes.update({
-                id: nid,
-                borderWidth: 3,
-                shadow: { enabled: true, color: 'rgba(26,115,232,0.5)' }
-            });
-        });
+        pEdges.forEach(eid => this.edges.update({ id: eid, color: { color: '#1a73e8' }, width: 4 }));
+        pNodes.forEach(nid => this.nodes.update({
+            id: nid,
+            borderWidth: 3,
+            shadow: { enabled: true, color: 'rgba(26,115,232,0.5)' }
+        }));
         setTimeout(() => this.network.fit({ nodes: pNodes, animation: { duration: 500 } }), 100);
     }
 
     renderLogCard(curr, next, info) {
         const log = document.getElementById('log-container');
         const cardHtml = `
-        <div class="card bg-base-200 shadow-sm border-l-4 border-primary overflow-hidden">
+        <div class="card bg-base-200 shadow-sm border-l-4 border-primary overflow-hidden mb-2">
             <div class="card-body p-3 gap-1">
                 <div class="flex justify-between items-center">
                     <span class="mono text-[10px] font-bold opacity-50">${curr}</span>
