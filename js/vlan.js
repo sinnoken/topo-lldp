@@ -170,7 +170,12 @@ class VlanAuditor {
         const prefix = mac.replace(/[:.-]/g, "").toUpperCase().substring(0, 6);
         return this.globalOuiData[prefix] || "Unknown";
     }
-
+    getIpByMac(mac) {
+        if (!mac) return "Unknown IP";
+        // 統一格式化：移除特殊符號並轉大寫，以符合 globalArpMap 的 Key
+        const cleanMac = mac.replace(/[:.-]/g, "").toUpperCase();
+        return this.globalArpMap[cleanMac] || "Unknown IP";
+    }
 
 
     /**
@@ -355,18 +360,31 @@ class VlanAuditor {
                     if (iface.status === 'up' && !iface.parent && iface.type === 'physical' && !mappedPorts.has(`${n.id}|${iface.name}`)) {
                         const virtualPeerId = `Peer_of_${n.id}_${iface.name}`;
                         const isEdge = iface.mac_count === 1;
-                        const vendor = isEdge ? this.getVendor(iface.mac_list[0]) : "";
+
+                        // --- 取得 IP 與 Vendor 資訊 ---
+                        let ipInfo = "";
+                        let vendor = "";
+
+                        if (isEdge && iface.mac_list && iface.mac_list.length > 0) {
+                            const mac = iface.mac_list[0];
+                            ipInfo = this.getIpByMac(mac); // 使用剛封裝好的 function
+                            vendor = this.getVendor(mac);
+                        }
+
+                        // 更新 Label：如果是 EdgeNode 就顯示 IP 和 Vendor
+                        const labelContent = isEdge
+                            ? `${iface.description || "Unknown"}\n${ipInfo}\n(${vendor})`
+                            : `${iface.description || "Unknown"}\n(MACs: ${iface.mac_count})`;
 
                         finalNodes.push({
                             id: virtualPeerId,
-                            label: `${iface.description || "Unknown"}\n(${isEdge ? vendor : 'MACs: ' + iface.mac_count})`,
+                            label: labelContent,
                             group: iface.mac_count === 0 ? "NoTraffic" : (isEdge ? "EdgeNode" : "Unknown"),
-                            // shape: isEdge ? "dot" : "diamond"
-                            // --- 修改部分 ---
                             shape: isEdge ? "circularImage" : "diamond",
                             image: isEdge ? this._generateInitialAvatarSvgForVis(vendor || "Unknown") : undefined,
-                            // ----------------
+                            size: 15
                         });
+
                         allEdges.push({ from: n.id, to: virtualPeerId, labelFrom: iface.name, dashes: true, isMissing: true });
                     }
                 });
@@ -432,10 +450,9 @@ class VlanAuditor {
                     const portMacs = ifInfo.mac_list || [];
                     const members = (ifInfo.members && ifInfo.members.length > 0) ? ifInfo.members : [ifName];
 
-                    // 這裡整合 ARP IP
+                    // 使用抽離出的 getIpByMac，並與 vendor 分開處理
                     const macDetailsArray = portMacs.map(m => {
-                        const cleanM = m.replace(/[:.-]/g, "").toUpperCase();
-                        const ip = this.globalArpMap[cleanM] || "Unknown IP";
+                        const ip = this.getIpByMac(m);
                         const vendor = this.getVendor(m);
                         return `${m} [${ip}] (${vendor})`;
                     });
@@ -491,10 +508,10 @@ class VlanAuditor {
 
         // 關鍵：明確加上 width 和 height
         const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="50" fill="${bgColor}" />
             <text x="50" y="50" text-anchor="middle" fill="white" 
-                  font-family="Arial, sans-serif" font-weight="bold" font-size="45" 
+                  font-family="Arial, sans-serif" font-weight="bold" font-size="50" 
                   dominant-baseline="central">${initials}</text>
         </svg>
         `.trim();
