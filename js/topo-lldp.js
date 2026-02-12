@@ -210,18 +210,18 @@ function getInitialData() {
             { "from": "DC1_CORE_SW_01", "to": "DC3_DIST_SW_01", "labelFrom": "xe-0/1/1", "labelTo": "xe-0/1/0", "label": "vlan: 2", "vlan_ids": [2] },
             { "from": "DC1_CORE_SW_01", "to": "DC4_ACC_SW_01", "labelFrom": "xe-0/1/2", "labelTo": "xe-0/1/0", "label": "vlan: 3", "vlan_ids": [3] },
             { "from": "DC1_CORE_SW_01", "to": "DC5_ACC_SW_01", "labelFrom": "xe-0/1/3", "labelTo": "xe-0/1/0", "label": "vlan: 4", "vlan_ids": [4] },
-            { "from": "DC1_CORE_SW_02", "to": "DC2_DIST_SW_02", "labelFrom": "xe-1/1", "labelTo": "uplink", "label": "vlan: 5", "vlan_ids": [5] },
-            { "from": "DC1_CORE_SW_02", "to": "DC3_DIST_SW_02", "labelFrom": "xe-1/2", "labelTo": "uplink", "label": "vlan: 6", "vlan_ids": [6] },
-            { "from": "DC1_CORE_SW_02", "to": "DC4_ACC_SW_02", "labelFrom": "ge-1/1", "labelTo": "uplink", "label": "vlan: 3", "vlan_ids": [3] },
-            { "from": "DC1_CORE_SW_02", "to": "DC5_ACC_SW_02", "labelFrom": "ge-1/2", "labelTo": "uplink", "label": "vlan: 4", "vlan_ids": [4] },
-            { "from": "DC2_DIST_SW_01", "to": "DC2_SRV_PROD_01", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 1", "vlan_ids": [1] },
-            { "from": "DC3_DIST_SW_01", "to": "DC3_SRV_DR_01", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 2", "vlan_ids": [2] },
-            { "from": "DC4_ACC_SW_01", "to": "DC4_DEV_NODE_01", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 3", "vlan_ids": [3] },
-            { "from": "DC5_ACC_SW_01", "to": "DC5_IOT_01", "labelFrom": "ge-0/1", "labelTo": "me0", "label": "vlan: 4", "vlan_ids": [4] },
-            { "from": "DC2_DIST_SW_02", "to": "DC2_SRV_PROD_02", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 5", "vlan_ids": [5] },
-            { "from": "DC3_DIST_SW_02", "to": "DC3_SRV_DR_02", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 6", "vlan_ids": [6] },
-            { "from": "DC4_ACC_SW_02", "to": "DC4_DEV_NODE_02", "labelFrom": "ge-0/1", "labelTo": "eth0", "label": "vlan: 3", "vlan_ids": [3] },
-            { "from": "DC5_ACC_SW_02", "to": "DC5_IOT_02", "labelFrom": "ge-0/1", "labelTo": "me0", "label": "vlan: 4", "vlan_ids": [4] }
+            { "from": "DC1_CORE_SW_02", "to": "DC2_DIST_SW_02", "labelFrom": "xe-0/1/0", "labelTo": "xe-0/1/0", "label": "vlan: 5", "vlan_ids": [5] },
+            { "from": "DC1_CORE_SW_02", "to": "DC3_DIST_SW_02", "labelFrom": "xe-0/1/1", "labelTo": "xe-0/1/0", "label": "vlan: 6", "vlan_ids": [6] },
+            { "from": "DC1_CORE_SW_02", "to": "DC4_ACC_SW_02", "labelFrom": "xe-0/1/2", "labelTo": "xe-0/1/0", "label": "vlan: 3", "vlan_ids": [3] },
+            { "from": "DC1_CORE_SW_02", "to": "DC5_ACC_SW_02", "labelFrom": "xe-0/1/3", "labelTo": "xe-0/1/0", "label": "vlan: 4", "vlan_ids": [4] },
+            { "from": "DC2_DIST_SW_01", "to": "DC2_SRV_PROD_01", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 1", "vlan_ids": [1] },
+            { "from": "DC3_DIST_SW_01", "to": "DC3_SRV_DR_01", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 2", "vlan_ids": [2] },
+            { "from": "DC4_ACC_SW_01", "to": "DC4_DEV_NODE_01", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 3", "vlan_ids": [3] },
+            { "from": "DC5_ACC_SW_01", "to": "DC5_IOT_01", "labelFrom": "ge-0/0/1", "labelTo": "me0", "label": "vlan: 4", "vlan_ids": [4] },
+            { "from": "DC2_DIST_SW_02", "to": "DC2_SRV_PROD_02", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 5", "vlan_ids": [5] },
+            { "from": "DC3_DIST_SW_02", "to": "DC3_SRV_DR_02", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 6", "vlan_ids": [6] },
+            { "from": "DC4_ACC_SW_02", "to": "DC4_DEV_NODE_02", "labelFrom": "ge-0/0/1", "labelTo": "eth0", "label": "vlan: 3", "vlan_ids": [3] },
+            { "from": "DC5_ACC_SW_02", "to": "DC5_IOT_02", "labelFrom": "ge-0/0/1", "labelTo": "me0", "label": "vlan: 4", "vlan_ids": [4] }
         ]
     };
 }
