@@ -203,8 +203,9 @@ function getInitialData() {
         ],
         "edges": [
             { "from": "DC1_CORE_FW_01", "to": "DC1_CORE_SW_01", "labelFrom": "port1", "labelTo": "ge-0/0/1", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
-            { "from": "DC1_CORE_FW_02", "to": "DC1_CORE_SW_02", "labelFrom": "port1", "labelTo": "ge-0/0/1", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
-            { "from": "DC1_CORE_SW_01", "to": "DC1_CORE_SW_02", "labelFrom": "xe-0/2/0", "labelTo": "xe-0/2/0", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
+            { "from": "DC1_CORE_FW_01", "to": "DC1_CORE_SW_02", "labelFrom": "port2", "labelTo": "ge-0/0/1", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
+            { "from": "DC1_CORE_FW_02", "to": "DC1_CORE_SW_01", "labelFrom": "port1", "labelTo": "ge-0/0/2", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
+            { "from": "DC1_CORE_FW_02", "to": "DC1_CORE_SW_02", "labelFrom": "port2", "labelTo": "ge-0/0/2", "label": "vlan: 1,2,3,4,5,6", "vlan_ids": [1, 2, 3, 4, 5, 6] },
             { "from": "DC1_CORE_SW_01", "to": "DC2_DIST_SW_01", "labelFrom": "xe-0/1/0", "labelTo": "xe-0/1/0", "label": "vlan: 1", "vlan_ids": [1] },
             { "from": "DC1_CORE_SW_01", "to": "DC3_DIST_SW_01", "labelFrom": "xe-0/1/1", "labelTo": "xe-0/1/0", "label": "vlan: 2", "vlan_ids": [2] },
             { "from": "DC1_CORE_SW_01", "to": "DC4_ACC_SW_01", "labelFrom": "xe-0/1/2", "labelTo": "xe-0/1/0", "label": "vlan: 3", "vlan_ids": [3] },
@@ -224,6 +225,7 @@ function getInitialData() {
         ]
     };
 }
+
 
 function toCompactJSON(obj) {
     if (!obj.nodes || !obj.edges) return JSON.stringify(obj, null, 2);
