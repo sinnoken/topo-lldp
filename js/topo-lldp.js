@@ -179,29 +179,29 @@ function getInitialData() {
     }
 
     return {
-        nodes: [
-            { "id": "DC1_CORE_FW_01", "label": "DC1-FW-01", "group": "firewall", "value": 9, "shape": "dot" },
-            { "id": "DC1_CORE_FW_02", "label": "DC1-FW-02", "group": "firewall", "value": 9, "shape": "dot" },
-            { "id": "DC1_CORE_SW_01", "label": "DC1-CORE-01", "group": "switch", "value": 8, "shape": "dot" },
-            { "id": "DC1_CORE_SW_02", "label": "DC1-CORE-02", "group": "switch", "value": 8, "shape": "dot" },
-            { "id": "DC2_DIST_SW_01", "label": "DC2-DIST-01", "group": "switch", "value": 7, "shape": "dot" },
-            { "id": "DC2_DIST_SW_02", "label": "DC2-DIST-02", "group": "switch", "value": 7, "shape": "dot" },
-            { "id": "DC2_SRV_PROD_01", "label": "PROD-DB-01", "group": "unknown", "value": 5, "shape": "dot" },
-            { "id": "DC2_SRV_PROD_02", "label": "PROD-APP-01", "group": "unknown", "value": 5, "shape": "dot" },
-            { "id": "DC3_DIST_SW_01", "label": "DC3_DIST_SW_01", "group": "switch", "value": 7, "shape": "dot" },
-            { "id": "DC3_DIST_SW_02", "label": "DC3_DIST_SW_02", "group": "switch", "value": 7, "shape": "dot" },
-            { "id": "DC3_SRV_DR_01", "label": "DR-STORAGE-01", "group": "unknown", "value": 5, "shape": "dot" },
-            { "id": "DC3_SRV_DR_02", "label": "DR-WEB-01", "group": "unknown", "value": 5, "shape": "dot" },
-            { "id": "DC4_ACC_SW_01", "label": "DC4_ACC_SW_01", "group": "switch", "value": 6, "shape": "dot" },
-            { "id": "DC4_ACC_SW_02", "label": "DC4_ACC_SW_02", "group": "switch", "value": 6, "shape": "dot" },
-            { "id": "DC4_DEV_NODE_01", "label": "DC4_DEV_NODE_01", "group": "unknown", "value": 3, "shape": "dot" },
-            { "id": "DC4_DEV_NODE_02", "label": "DC4_DEV_NODE_02", "group": "unknown", "value": 3, "shape": "dot" },
-            { "id": "DC5_ACC_SW_01", "label": "DC5_ACC_SW_01", "group": "switch", "value": 6, "shape": "dot" },
-            { "id": "DC5_ACC_SW_02", "label": "DC5_ACC_SW_02", "group": "switch", "value": 6, "shape": "dot" },
-            { "id": "DC5_IOT_01", "label": "OFFICE-WIFI-01", "group": "unknown", "value": 2, "shape": "dot" },
-            { "id": "DC5_IOT_02", "label": "OFFICE-PRINTER-01", "group": "unknown", "value": 2, "shape": "dot" }
+        "nodes": [
+            { "id": "DC1_CORE_FW_01", "label": "DC1-FW-01", "group": "firewall", "shape": "dot" },
+            { "id": "DC1_CORE_FW_02", "label": "DC1-FW-02", "group": "firewall", "shape": "dot" },
+            { "id": "DC1_CORE_SW_01", "label": "DC1-CORE-01", "group": "switch", "shape": "dot" },
+            { "id": "DC1_CORE_SW_02", "label": "DC1-CORE-02", "group": "switch", "shape": "dot" },
+            { "id": "DC2_DIST_SW_01", "label": "DC2-DIST-01", "group": "switch", "shape": "dot" },
+            { "id": "DC2_DIST_SW_02", "label": "DC2-DIST-02", "group": "switch", "shape": "dot" },
+            { "id": "DC2_SRV_PROD_01", "label": "PROD-DB-01", "group": "unknown", "shape": "dot" },
+            { "id": "DC2_SRV_PROD_02", "label": "PROD-APP-01", "group": "unknown", "shape": "dot" },
+            { "id": "DC3_DIST_SW_01", "label": "DC3_DIST_SW_01", "group": "switch", "shape": "dot" },
+            { "id": "DC3_DIST_SW_02", "label": "DC3_DIST_SW_02", "group": "switch", "shape": "dot" },
+            { "id": "DC3_SRV_DR_01", "label": "DR-STORAGE-01", "group": "unknown", "shape": "dot" },
+            { "id": "DC3_SRV_DR_02", "label": "DR-WEB-01", "group": "unknown", "shape": "dot" },
+            { "id": "DC4_ACC_SW_01", "label": "DC4_ACC_SW_01", "group": "switch", "shape": "dot" },
+            { "id": "DC4_ACC_SW_02", "label": "DC4_ACC_SW_02", "group": "switch", "shape": "dot" },
+            { "id": "DC4_DEV_NODE_01", "label": "DC4_DEV_NODE_01", "group": "unknown", "shape": "dot" },
+            { "id": "DC4_DEV_NODE_02", "label": "DC4_DEV_NODE_02", "group": "unknown", "shape": "dot" },
+            { "id": "DC5_ACC_SW_01", "label": "DC5_ACC_SW_01", "group": "switch", "shape": "dot" },
+            { "id": "DC5_ACC_SW_02", "label": "DC5_ACC_SW_02", "group": "switch", "shape": "dot" },
+            { "id": "DC5_IOT_01", "label": "OFFICE-WIFI-01", "group": "unknown", "shape": "dot" },
+            { "id": "DC5_IOT_02", "label": "OFFICE-PRINTER-01", "group": "unknown", "shape": "dot" }
         ],
-        edges: [
+        "edges": [
             { "from": "DC1_CORE_SW_01", "to": "DC1_CORE_SW_02", "labelFrom": "Stack", "labelTo": "Stack", "width": 5, "color": { "color": "#EF4444" } },
             { "from": "DC1_CORE_FW_01", "to": "DC1_CORE_SW_01", "labelFrom": "p1", "labelTo": "p1", "label": "vlan: 10,20,30,40", "vlan_ids": [10, 20, 30, 40], "width": 3, "color": { "color": "#3B82F6" } },
             { "from": "DC1_CORE_FW_02", "to": "DC1_CORE_SW_02", "labelFrom": "p1", "labelTo": "p1", "width": 3, "color": { "color": "#3B82F6" } },
