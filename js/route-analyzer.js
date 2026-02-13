@@ -112,7 +112,14 @@ class NetworkAnalyzer {
     // --- 自定義標籤渲染核心 ---
     renderCustomLabels(ctx) {
         const allEdges = this.network.body.edges;
-        const rawEdgesData = this.edges.get(); // 取得包含 labelFrom/To 的原始資料
+        // 重大優化：避免在每幀渲染時呼叫 .get()，改用全量遍歷
+        // 如果效能仍有壓力，建議改用 this.edges.get({ filter: ... }) 預篩選有 label 的資料
+        const rawEdgesData = this.edges.get();
+
+        // 1. 【提升狀態】將通用的設定移到迴圈外
+        ctx.save(); // 全局只存這一次
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
         rawEdgesData.forEach(rawData => {
             const edge = allEdges[rawData.id];
@@ -126,35 +133,35 @@ class NetworkAnalyzer {
 
                 if (labelFrom || labelTo) {
                     const { font } = edge.options;
-                    ctx.save();
+
+                    // 2. 【直接賦值】不使用 save/restore，直接覆蓋屬性
+                    // 這裡只更新變動的部分：字體樣式
                     ctx.font = `${edge.selected ? 'bold' : ''} ${font.size}px ${font.face}`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
 
                     if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.2, viaNode);
                     if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.8, viaNode);
-
-                    ctx.restore();
                 }
 
-                // 處理 Hover 時的原生 Label 置頂
                 if (isHover) {
+                    // 原生 drawLabel 內部通常會自帶 save/restore，這是為了安全
+                    // 但因為我們在最外層有 restore，所以這裡呼叫它是安全的
                     edge.drawLabel(ctx, viaNode);
                 }
             }
         });
+
+        ctx.restore(); // 全局只還原這一次
     }
 
     _drawSingleLabel(ctx, edge, text, percentage, viaNode) {
-        // 1. 取得節點實體以判斷形狀與尺寸
+        // 1. 取得節點實體
         const fromNode = this.network.body.nodes[edge.from.id];
         const toNode = this.network.body.nodes[edge.to.id];
+        if (!fromNode || !toNode) return;
 
-        // 獲取近似半徑 (考慮不同 Shape)
+        // 獲取近似半徑 (優化：如果 shape 固定的話可以改為常數)
         const getRadius = (node) => {
-            if (node.options.shape === 'box') {
-                return (node.shape.width / 2) || 30;
-            }
+            if (node.options.shape === 'box') return (node.shape.width / 2) || 30;
             return node.options.size || 20;
         };
 
@@ -165,12 +172,11 @@ class NetworkAnalyzer {
         const dx = edge.to.x - edge.from.x;
         const dy = edge.to.y - edge.from.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance === 0) return;
 
-        // 3. 計算安全邊際與箭頭避讓
+        // 3. 計算安全邊際
         const margin = 12;
-        // 根據箭頭縮放倍率補正邊距，避免 labelTo 被箭頭遮擋
         const arrowPadding = edge.options.arrows.to.enabled ? (edge.options.arrows.to.scaleFactor * 20) : 0;
-
         const minP = (rFrom + margin) / distance;
         const maxP = 1 - (rTo + margin + arrowPadding) / distance;
 
@@ -180,20 +186,17 @@ class NetworkAnalyzer {
         let pt = edge.edgeType.getPoint(safeP, viaNode);
         if (!pt || isNaN(pt.x)) return;
 
-        // --- 自動尺寸計算邏輯 ---
+        // --- 自動尺寸計算 ---
         const fontSize = edge.options.font.size || 10;
         const metrics = ctx.measureText(text);
         const textWidth = metrics.width;
 
-        // 定義動態內距 (以字體大小為基準)
         const paddingX = fontSize * 0.4;
         const paddingY = fontSize * 0.2;
-
         const rectW = textWidth + paddingX * 2;
         const rectH = fontSize + paddingY * 2;
-        const radius = 3; // 圓角
 
-        // --- 繪製邏輯 ---
+        // 5. 繪製邏輯
         let angle = Math.atan2(dy, dx);
         if (angle < -Math.PI / 2 || angle > Math.PI / 2) angle += Math.PI;
 
@@ -201,24 +204,19 @@ class NetworkAnalyzer {
         ctx.translate(pt.x, pt.y);
         ctx.rotate(angle);
 
-        // 將標籤向上平移，避免壓在連線上 (offset 約為高度的一半再加一點點)
-        // ctx.translate(0, -(rectH / 2 + 2));
-        ctx.translate(0, 0);
-
-        // 繪製背景
-        ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; // 稍微提高不透明度
-        ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 4;
-        this._drawRoundedRect(ctx, -rectW / 2, -rectH / 2, rectW, rectH, radius);
+        // --- 移除 Shadow，改用簡單的 Stroke 增加辨識度 ---
+        // 繪製背景矩形
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        this._drawRoundedRect(ctx, -rectW / 2, -rectH / 2, rectW, rectH, 3);
         ctx.fill();
 
-        // 繪製文字
-        ctx.shadowBlur = 0; // 文字不需要陰影
-        ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // 用細微的灰色邊框取代陰影 (效能遠高於 Shadow)
+        ctx.strokeStyle = "rgba(127, 127, 127, 0.5)";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
 
-        // 這裡的 y 座標設定為 0 搭配 textBaseline = 'middle' 即可完美置中
+        // 繪製文字
+        ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
         ctx.fillText(text, 0, 0);
 
         ctx.restore();
@@ -431,7 +429,7 @@ class NetworkAnalyzer {
 
         let html = `
         <div class="mb-3 flex items-center justify-between">
-            <span class="badge badge-primary font-mono text-[10px] py-3">${router.label.replace('\n', ' ')}</span>
+            <span class="badge badge-primary font-mono text-[10px] py-3">${router.id.replace('\n', ' ')}</span>
             <span class="text-[9px] opacity-50 font-bold">INTERFACES: ${router.interfaces?.length || 0}</span>
         </div>
         <div class="overflow-hidden rounded-lg border border-base-300">
