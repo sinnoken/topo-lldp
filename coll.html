@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vis-network Multi-Clustering Fix</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        #mynetwork {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            background: #f4f4f4;
+        }
+
+        .controls {
+            padding: 10px;
+            background: #eee;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="controls">
+        <button onclick="clusterByLocation()">📍 按地點</button>
+        <button onclick="clusterByBrand()">🏷️ 按品牌</button>
+        <button onclick="releaseAll()">🔓 全部還原</button>
+    </div>
+    <div id="mynetwork"></div>
+
+    <script>
+        // 新增了匯聚層與存取層，讓結構更完整
+        const nodes = new vis.DataSet([
+            // --- 核心層 (Core Layer) ---
+            { id: 1, label: 'Core-SW', group: 'sw', location: '台北', brand: 'Arista', level: 0 },
+
+            // --- 匯聚層 (Distribution Layer) ---
+            { id: 10, label: 'Dist-SW-TP', group: 'sw', location: '台北', brand: 'Cisco', level: 1 },
+            { id: 11, label: 'Dist-SW-TC', group: 'sw', location: '台中', brand: 'Cisco', level: 1 },
+
+            // --- 存取層 (Access Layer) ---
+            { id: 20, label: 'Acc-SW-01', group: 'sw', location: '台北', brand: 'D-Link', level: 2 },
+            { id: 21, label: 'Acc-SW-02', group: 'sw', location: '台中', brand: 'D-Link', level: 2 },
+
+            // --- 終端設備層 (Host Layer) ---
+            { id: 2, label: 'PC-01', group: 'host', location: '台北', brand: 'ASUS', level: 3 },
+            { id: 3, label: 'PC-02', group: 'host', location: '台北', brand: 'ASUS', level: 3 },
+            { id: 4, label: 'PC-03', group: 'host', location: '台中', brand: 'Acer', level: 3 },
+            { id: 5, label: 'PC-04', group: 'host', location: '台中', brand: 'Acer', level: 3 },
+            { id: 6, label: 'Server-01', group: 'host', location: '台中', brand: 'HPE', level: 3 }
+        ]);
+
+        const edges = new vis.DataSet([
+            // 核心 連接 匯聚
+            { from: 1, to: 10 },
+            { from: 1, to: 11 },
+
+            // 匯聚 連接 存取
+            { from: 10, to: 20 },
+            { from: 11, to: 21 },
+
+            // 存取 連接 終端
+            { from: 20, to: 2 },
+            { from: 20, to: 3 },
+            { from: 21, to: 4 },
+            { from: 21, to: 5 },
+            { from: 1, to: 6 }
+        ]);
+
+        const network = new vis.Network(
+            document.getElementById('mynetwork'),
+            { nodes, edges },
+            {
+                nodes: { shape: 'dot' },
+                layout: {
+                    hierarchical: {
+                        enabled: true,        // 開啟階層佈局
+                        direction: 'LR',      // 上到下
+                        sortMethod: 'directed', // 關鍵：依據 level 排序
+                        levelSeparation: 150,
+                        nodeSpacing: 200
+                    }
+                },
+                physics: { enabled: false }   // 階層模式通常關閉物理引擎更穩定
+            }
+        );
+
+        // 頁面加載完成後立即計算一次
+        autoLayout();
+
+        function clusterByLocation() {
+            releaseAll();
+            autoLayout(); // 確保層級數據是最新的
+
+            const locations = [...new Set(nodes.get().map(n => n.location))];
+
+            locations.forEach(loc => {
+                if (!loc) return;
+
+                // 關鍵：找出該地點中，層級最高的設備（Level 最小的）
+                const memberNodes = nodes.get({ filter: n => n.location === loc });
+                const topLevel = Math.min(...memberNodes.map(n => n.level));
+
+                network.cluster({
+                    joinCondition: (n) => n.location === loc,
+                    clusterNodeProperties: {
+                        id: 'loc-' + loc,
+                        label: '區域: ' + loc,
+                        shape: 'box',
+                        color: '#6AB7FF',
+                        allowSingleNodeCluster: true,
+                        // 讓群組方塊留在該區域「最高級」設備的位置
+                        level: topLevel
+                    }
+                });
+            });
+        }
+
+        function clusterByBrand() {
+            releaseAll();
+            autoLayout(); // 打包前重新確認一次層級
+
+            const brands = [...new Set(nodes.get().map(n => n.brand))];
+
+            brands.forEach(b => {
+                if (!b) return;
+
+                // 找出該品牌中 Level 最小（最靠近 Core）的節點作為 Cluster 的 Level
+                const memberNodes = nodes.get({ filter: n => n.brand === b });
+                const minLevel = Math.min(...memberNodes.map(n => n.level));
+
+                network.cluster({
+                    joinCondition: (n) => n.brand === b,
+                    clusterNodeProperties: {
+                        id: 'brand-' + b,
+                        label: '品牌: ' + b,
+                        shape: 'diamond',
+                        color: '#FFA726',
+                        allowSingleNodeCluster: true,
+                        level: minLevel // 繼承層級，保證位置正確
+                    }
+                });
+            });
+        }
+
+        function releaseAll() {
+            const allCurrentNodes = network.body.nodeIndices;
+            allCurrentNodes.forEach(id => {
+                if (network.isCluster(id)) {
+                    network.openCluster(id);
+                }
+            });
+            autoLayout(); // 還原後重新計算排版
+        }
+
+        function autoLayout() {
+            // 1. 找出潛在的 Root
+            // 計算每個節點的連線數
+            const allNodes = nodes.get();
+            const allEdges = edges.get();
+
+            let connectionCounts = {};
+            allNodes.forEach(n => connectionCounts[n.id] = 0);
+            allEdges.forEach(e => {
+                connectionCounts[e.from]++;
+                connectionCounts[e.to]++;
+            });
+
+            // 篩選出 group 為 'sw' 且連線數最多的作為 Root
+            let rootNode = allNodes
+                .filter(n => n.group === 'sw')
+                .sort((a, b) => connectionCounts[b.id] - connectionCounts[a.id])[0];
+
+            if (!rootNode) return;
+
+            // 2. 執行 BFS 演算法分配 Level
+            let levels = {};
+            levels[rootNode.id] = 0;
+            let queue = [rootNode.id];
+            let visited = new Set([rootNode.id]);
+
+            while (queue.length > 0) {
+                let currId = queue.shift();
+                let currLevel = levels[currId];
+
+                // 找鄰居
+                allEdges.forEach(e => {
+                    let neighborId = null;
+                    if (e.from === currId) neighborId = e.to;
+                    else if (e.to === currId) neighborId = e.from;
+
+                    if (neighborId !== null && !visited.has(neighborId)) {
+                        visited.add(neighborId);
+                        levels[neighborId] = currLevel + 1;
+                        queue.push(neighborId);
+                    }
+                });
+            }
+
+            // 3. 更新節點數據
+            const updates = Object.keys(levels).map(id => ({
+                id: parseInt(id),
+                level: levels[id]
+            }));
+            nodes.update(updates);
+        }
+    </script>
+</body>
+
+</html>
