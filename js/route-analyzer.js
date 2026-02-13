@@ -43,7 +43,7 @@ class NetworkAnalyzer {
                 color: { background: '#ffffff', border: '#dadce0' }
             },
             edges: {
-                arrows: 'to',
+                arrows: { to: { enabled: true, scaleFactor: 0.2 } },
                 width: 1,
                 hoverWidth: 1,
                 color: { color: '#dddddd', highlight: '#00ff00', hover: '#ff8800', inherit: false },
@@ -131,8 +131,8 @@ class NetworkAnalyzer {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
-                    if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.25, viaNode);
-                    if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.75, viaNode);
+                    if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.2, viaNode);
+                    if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.8, viaNode);
 
                     ctx.restore();
                 }
@@ -146,17 +146,54 @@ class NetworkAnalyzer {
     }
 
     _drawSingleLabel(ctx, edge, text, percentage, viaNode) {
-        let pt = edge.edgeType.getPoint(percentage, viaNode);
-        if (!pt || isNaN(pt.x)) return;
+        // 1. 取得節點實體以判斷形狀與尺寸
+        const fromNode = this.network.body.nodes[edge.from.id];
+        const toNode = this.network.body.nodes[edge.to.id];
 
+        // 獲取近似半徑 (考慮不同 Shape)
+        const getRadius = (node) => {
+            if (node.options.shape === 'box') {
+                return (node.shape.width / 2) || 30;
+            }
+            return node.options.size || 20;
+        };
+
+        const rFrom = getRadius(fromNode);
+        const rTo = getRadius(toNode);
+
+        // 2. 計算連線向量與距離
         const dx = edge.to.x - edge.from.x;
         const dy = edge.to.y - edge.from.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance < 50) {
-            pt = edge.edgeType.getPoint(percentage < 0.5 ? 0.3 : 0.7, viaNode);
-        }
+        // 3. 計算安全邊際與箭頭避讓
+        const margin = 12;
+        // 根據箭頭縮放倍率補正邊距，避免 labelTo 被箭頭遮擋
+        const arrowPadding = edge.options.arrows.to.enabled ? (edge.options.arrows.to.scaleFactor * 20) : 0;
 
+        const minP = (rFrom + margin) / distance;
+        const maxP = 1 - (rTo + margin + arrowPadding) / distance;
+
+        let safeP = (percentage < 0.5) ? Math.max(percentage, minP) : Math.min(percentage, maxP);
+
+        // 4. 取得修正後的座標
+        let pt = edge.edgeType.getPoint(safeP, viaNode);
+        if (!pt || isNaN(pt.x)) return;
+
+        // --- 自動尺寸計算邏輯 ---
+        const fontSize = edge.options.font.size || 10;
+        const metrics = ctx.measureText(text);
+        const textWidth = metrics.width;
+
+        // 定義動態內距 (以字體大小為基準)
+        const paddingX = fontSize * 0.4;
+        const paddingY = fontSize * 0.2;
+
+        const rectW = textWidth + paddingX * 2;
+        const rectH = fontSize + paddingY * 2;
+        const radius = 3; // 圓角
+
+        // --- 繪製邏輯 ---
         let angle = Math.atan2(dy, dx);
         if (angle < -Math.PI / 2 || angle > Math.PI / 2) angle += Math.PI;
 
@@ -164,18 +201,26 @@ class NetworkAnalyzer {
         ctx.translate(pt.x, pt.y);
         ctx.rotate(angle);
 
-        const metrics = ctx.measureText(text);
-        const w = metrics.width, h = 12, pH = 4;
+        // 將標籤向上平移，避免壓在連線上 (offset 約為高度的一半再加一點點)
+        // ctx.translate(0, -(rectH / 2 + 2));
+        ctx.translate(0, 0);
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        // 繪製背景
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)"; // 稍微提高不透明度
         ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 3;
-        this._drawRoundedRect(ctx, -w / 2 - pH, -h / 2, w + pH * 2, h, 3);
+        ctx.shadowBlur = 4;
+        this._drawRoundedRect(ctx, -rectW / 2, -rectH / 2, rectW, rectH, radius);
         ctx.fill();
 
-        ctx.shadowBlur = 0;
+        // 繪製文字
+        ctx.shadowBlur = 0; // 文字不需要陰影
         ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
-        ctx.fillText(text, 0, 1);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 這裡的 y 座標設定為 0 搭配 textBaseline = 'middle' 即可完美置中
+        ctx.fillText(text, 0, 0);
+
         ctx.restore();
     }
 
@@ -323,7 +368,7 @@ class NetworkAnalyzer {
                 id: eid,
                 color: { color: '#4f46e5' }, // 使用 Indigo 色
                 width: 4,
-                arrows: { to: { enabled: true, scaleFactor: 1.2 } },
+                arrows: { to: { enabled: true, scaleFactor: 0.3 } },
                 dashes: false // 確保不是虛線
             });
         });
