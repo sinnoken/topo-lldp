@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLI Output Diff Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .diff-line {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            white-space: pre-wrap;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .diff-added {
+            background-color: #d1fae5;
+        }
+
+        .diff-removed {
+            background-color: #fee2e2;
+        }
+
+        .diff-common {
+            background-color: #f3f4f6;
+        }
+
+        .diff-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body class="bg-base-200 p-4 lg:p-8">
+
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-center text-primary uppercase tracking-tight">CLI Comparison Tool</h1>
+
+        <div class="card bg-base-100 shadow-xl p-6 mb-8">
+            <div class="flex flex-col lg:flex-row gap-6 mb-6">
+                <div class="form-control flex-1">
+                    <label class="label">
+                        <span class="label-text font-bold text-error">Original Configuration (Old)</span>
+                    </label>
+                    <textarea id="originalConfig"
+                        class="textarea textarea-bordered h-64 font-mono text-xs focus:textarea-primary"
+                        placeholder="Paste old output here...">
+version 15.0
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+hostname RouterA
+!
+interface GigabitEthernet0/0
+ ip address 192.168.1.1 255.255.255.0
+ negotiation auto
+!
+interface GigabitEthernet0/1
+ no ip address
+ shutdown
+ negotiation auto
+!
+router ospf 1
+ router-id 1.1.1.1
+ log-adjacency-changes
+ network 192.168.1.0 0.0.0.255 area 0
+!
+line con 0
+ password cisco
+ login
+line vty 0 4
+ password cisco
+ login
+!
+end
+                </textarea>
+                </div>
+
+                <div class="form-control flex-1">
+                    <label class="label">
+                        <span class="label-text font-bold text-success">New Configuration (New)</span>
+                    </label>
+                    <textarea id="newConfig"
+                        class="textarea textarea-bordered h-64 font-mono text-xs focus:textarea-primary"
+                        placeholder="Paste new output here...">
+version 15.0
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+hostname RouterB
+!
+interface GigabitEthernet0/0
+ ip address 192.168.1.1 255.255.255.0
+ negotiation auto
+!
+interface GigabitEthernet0/1
+ ip address 192.168.2.1 255.255.255.0
+ no shutdown
+ negotiation auto
+!
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ network 192.168.1.0 0.0.0.255 area 0
+ network 192.168.2.0 0.0.0.255 area 0
+!
+line con 0
+ password new_cisco_pass
+ login
+!
+end
+                </textarea>
+                </div>
+            </div>
+
+            <button onclick="displayDiff()" class="btn btn-primary btn-block shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Generate Comparison
+            </button>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-secondary">Diff Results</h2>
+            <div class="flex flex-col lg:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="text-sm font-bold text-error mb-2 px-2 uppercase">Old Version</div>
+                    <div id="diffOld"
+                        class="diff-container border border-base-300 rounded-box bg-base-100 shadow-inner"></div>
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-bold text-success mb-2 px-2 uppercase">New Version</div>
+                    <div id="diffNew"
+                        class="diff-container border border-base-300 rounded-box bg-base-100 shadow-inner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+    <script>
+        function normalizeConfig(text) {
+            return text.split('\n').map(line => line.trim()).join('\n');
+        }
+
+        function displayDiff() {
+            const originalConfig = document.getElementById('originalConfig').value;
+            const newConfig = document.getElementById('newConfig').value;
+            const changes = Diff.diffLines(normalizeConfig(originalConfig), normalizeConfig(newConfig));
+
+            const diffOldEl = document.getElementById('diffOld');
+            const diffNewEl = document.getElementById('diffNew');
+            diffOldEl.innerHTML = '';
+            diffNewEl.innerHTML = '';
+
+            let oldLineNum = 1;
+            let newLineNum = 1;
+
+            changes.forEach((part) => {
+                const lines = part.value.split('\n');
+                lines.forEach((line, index) => {
+                    if (index === lines.length - 1 && line === '') return;
+
+                    const oldLineDiv = document.createElement('div');
+                    const newLineDiv = document.createElement('div');
+                    oldLineDiv.classList.add('diff-line');
+                    newLineDiv.classList.add('diff-line');
+
+                    if (part.added) {
+                        newLineDiv.classList.add('diff-added');
+                        newLineDiv.innerHTML = `<span class="opacity-40 w-8 inline-block text-right pr-2">${newLineNum++}</span><span class="text-success font-bold">+</span> ${line}`;
+                        oldLineDiv.innerHTML = `<span class="w-8 inline-block"></span>`;
+                    } else if (part.removed) {
+                        oldLineDiv.classList.add('diff-removed');
+                        oldLineDiv.innerHTML = `<span class="opacity-40 w-8 inline-block text-right pr-2">${oldLineNum++}</span><span class="text-error font-bold">-</span> ${line}`;
+                        newLineDiv.innerHTML = `<span class="w-8 inline-block"></span>`;
+                    } else {
+                        oldLineDiv.classList.add('diff-common');
+                        newLineDiv.classList.add('diff-common');
+                        const lineContent = `<span class="opacity-40 w-8 inline-block text-right pr-2">LINE</span> ${line}`;
+                        oldLineDiv.innerHTML = lineContent.replace('LINE', oldLineNum++);
+                        newLineDiv.innerHTML = lineContent.replace('LINE', newLineNum++);
+                    }
+                    diffOldEl.appendChild(oldLineDiv);
+                    diffNewEl.appendChild(newLineDiv);
+                });
+            });
+        }
+        document.addEventListener('DOMContentLoaded', displayDiff);
+    </script>
+</body>
+
+</html>
