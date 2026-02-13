@@ -186,17 +186,35 @@ class NetworkAnalyzer {
         let pt = edge.edgeType.getPoint(safeP, viaNode);
         if (!pt || isNaN(pt.x)) return;
 
-        // --- 自動尺寸計算 ---
+        // --- 安全的尺寸計算 ---
         const fontSize = edge.options.font.size || 10;
-        const metrics = ctx.measureText(text);
-        const textWidth = metrics.width;
+        const face = edge.options.font.face || 'sans-serif';
 
-        const paddingX = fontSize * 0.4;
-        const paddingY = fontSize * 0.2;
-        const rectW = textWidth + paddingX * 2;
-        const rectH = fontSize + paddingY * 2;
+        // 確保 edge 內部有一個存放我們自定義資料的地方
+        // 如果 edge 不給塞，可以考慮改塞在 edge.options 內 (較不建議但保險)
+        if (!edge._myCache) {
+            edge._myCache = {};
+        }
 
-        // 5. 繪製邏輯
+        // 只有在文字、字體大小或字體改變時才重算
+        if (edge._myCache.lastText !== text || edge._myCache.lastFontSize !== fontSize) {
+            ctx.save();
+            ctx.font = `${fontSize}px ${face}`; // 重點：必須先設定字體再量測
+            const metrics = ctx.measureText(text);
+
+            const paddingX = fontSize * 0.4;
+            const paddingY = fontSize * 0.2;
+
+            edge._myCache.rectW = metrics.width + paddingX * 2;
+            edge._myCache.rectH = fontSize + paddingY * 2;
+            edge._myCache.lastText = text;
+            edge._myCache.lastFontSize = fontSize;
+            ctx.restore();
+        }
+
+        const { rectW, rectH } = edge._myCache;
+
+        // --- 5. 繪製邏輯 ---
         let angle = Math.atan2(dy, dx);
         if (angle < -Math.PI / 2 || angle > Math.PI / 2) angle += Math.PI;
 
@@ -204,18 +222,21 @@ class NetworkAnalyzer {
         ctx.translate(pt.x, pt.y);
         ctx.rotate(angle);
 
-        // --- 移除 Shadow，改用簡單的 Stroke 增加辨識度 ---
-        // 繪製背景矩形
+        // 設定字體 (繪製時也要設定一次)
+        ctx.font = `${fontSize}px ${face}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 繪製背景
         ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
         this._drawRoundedRect(ctx, -rectW / 2, -rectH / 2, rectW, rectH, 3);
         ctx.fill();
 
-        // 用細微的灰色邊框取代陰影 (效能遠高於 Shadow)
         ctx.strokeStyle = "rgba(127, 127, 127, 0.5)";
         ctx.lineWidth = 0.5;
         ctx.stroke();
 
-        // 繪製文字
+        // 繪製文字 (置中繪製，所以座標是 0, 0)
         ctx.fillStyle = edge.selected ? '#1a73e8' : '#5f6368';
         ctx.fillText(text, 0, 0);
 
