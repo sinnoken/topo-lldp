@@ -91,6 +91,16 @@
 
     <script>
         // Core Parsing Logic (Kept Original Logic)
+        const CONFIG = {
+            STORAGE: {
+                POSITIONS: 'networkNodesPosition',
+                DATA: 'networkTopologyData',
+                ARP_MAP: 'networkArpMap',
+                EXPIRY: 'storageExpiry'  // 過期時間戳
+            },
+            STORAGE_EXPIRY_MS: 1 * 8 * 60 * 60 * 1000,  // 8小時（毫秒）
+        }
+
         function universalArpParser(rawText) {
             const root = { arpMap: {} };
             const blocks = rawText.split(/_{5,}/);
@@ -135,6 +145,13 @@
             const result = universalArpParser(input);
             const jsonString = JSON.stringify(result, null, 4);
             outputArea.value = jsonString;
+
+            // --- 新增：同步到 localStorage ---
+            // 建議儲存物件格式，方便其他頁面直接 JSON.parse 使用
+            localStorage.setItem(CONFIG.STORAGE.ARP_MAP, JSON.stringify(result));
+            // 保存過期時間戳
+            const expiryTime = new Date().getTime() + CONFIG.STORAGE_EXPIRY_MS;
+            localStorage.setItem(CONFIG.STORAGE.EXPIRY, expiryTime.toString());
 
             // Auto-copy to clipboard
             navigator.clipboard.writeText(jsonString).then(() => {

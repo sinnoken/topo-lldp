@@ -240,6 +240,16 @@
         </div>
     </footer>
     <script>
+
+        const CONFIG = {
+            STORAGE: {
+                POSITIONS: 'networkNodesPosition',
+                DATA: 'networkTopologyData',
+                ARP_MAP: 'networkArpMap',
+                EXPIRY: 'storageExpiry'  // 過期時間戳
+            },
+            STORAGE_EXPIRY_MS: 1 * 8 * 60 * 60 * 1000,  // 8小時（毫秒）
+        }
         let auditor;
         const editorConfigs = [
             { id: 'config-editor', prefix: 'config' },
@@ -252,6 +262,33 @@
 
         async function init() {
             auditor = new VlanAuditor();
+
+            // --- 1. 從 localStorage 載入 ARP 資料 ---
+            const arpEditor = document.getElementById('arp-editor');
+            if (!isStorageExpired()) {
+                const savedArp = localStorage.getItem(CONFIG.STORAGE.ARP_MAP);
+                // 檢查是否為空或是預設的測試資料，若是則覆蓋
+                if (savedArp && (!arpEditor.value || arpEditor.value.trim() === "" || arpEditor.value.includes("ER_TEST_1"))) {
+                    arpEditor.value = savedArp;
+                    auditor.parseArpData(savedArp);
+                }
+            }
+
+            // --- 2. 新增：從 localStorage 載入 Topology 資料 ---
+            const topoEditor = document.getElementById('topo-editor');
+            if (!isStorageExpired()) {
+                const savedTopo = localStorage.getItem(CONFIG.STORAGE.DATA); // 對應 'networkTopologyData'
+                if (savedTopo) {
+                    // 將物件轉回漂亮的 JSON 字串填入
+                    topoEditor.value = JSON.stringify(JSON.parse(savedTopo), null, 4);
+                }
+            } else {
+                console.log("📂 Storage expired, clearing old topology data.");
+                localStorage.removeItem(CONFIG.STORAGE.DATA);
+                localStorage.removeItem(CONFIG.STORAGE.ARP_MAP);
+                localStorage.removeItem(CONFIG.STORAGE.EXPIRY);
+            }
+
             // 1. 設定事件監聽器
             setupEventListeners();
             console.log("setupEventListeners called");
@@ -310,6 +347,13 @@
         function triggerFullProcess() {
             // 2. 觸發解析邏輯
             try {
+
+                // 確保 auditor 的 ARP map 是同步的
+                const arpContent = document.getElementById('arp-editor').value;
+                if (arpContent.trim()) {
+                    auditor.parseArpData(arpContent);
+                }
+
                 const result = auditor.processData(
                     document.getElementById('config-editor').value,
                     document.getElementById('vlan-editor').value,
@@ -393,6 +437,13 @@
                 alert("匯出失敗，請查看控制台錯誤。");
             }
         }
+
+        function isStorageExpired() {
+            const expiry = localStorage.getItem(CONFIG.STORAGE.EXPIRY);
+            if (!expiry) return true;
+            return Date.now() > parseInt(expiry);
+        }
+
         window.addEventListener('load', init);
 
     </script>
