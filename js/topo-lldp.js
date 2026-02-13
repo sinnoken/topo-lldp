@@ -298,7 +298,7 @@ function toggleLayoutMode() {
 
     if (currentLayoutMode === 0) {
         // --- 模式 0: 靜態 (手動) ---
-        if (btn) btn.innerText = "佈局: 靜態";
+        if (btn) btn.innerText = "Static";
 
         const savedPos = JSON.parse(localStorage.getItem(CONFIG.STORAGE.POSITIONS)) || {};
         const updates = nodesDataSet.get().map(node => ({
@@ -318,7 +318,7 @@ function toggleLayoutMode() {
     }
     else if (currentLayoutMode === 1) {
         // --- 模式 1: 自動階層 ---
-        if (btn) btn.innerText = "佈局: 階層";
+        if (btn) btn.innerText = "Hierarchical";
         options.layout.hierarchical = {
             enabled: true,
             levelSeparation: 150,
@@ -333,7 +333,7 @@ function toggleLayoutMode() {
     }
     else if (currentLayoutMode === 2) {
         // --- 模式 2: 物理引擎 (帶有迭代動畫) ---
-        if (btn) btn.innerText = "佈局: 物理引擎";
+        if (btn) btn.innerText = "Physics";
 
         options.physics = {
             enabled: true,
@@ -521,31 +521,31 @@ function initApp() {
     const legend = document.createElement('div');
     legend.className = 'network-legend';
     legend.innerHTML = `
-<div class="legend-row"><i class="fa-solid fa-shield-halved" style="color: #22A338;"></i> 防火牆 </div>
-<div class="legend-row"><i class="fa-solid fa-network-wired" style="color: ${THEME.AMBER};"></i> 交換器 </div>
-<div class="legend-row"><i class="fa-solid fa-server" style="color: ${THEME.PURPLE};"></i> 伺服器 </div>
+<div class="legend-row"><i class="fa-solid fa-shield-halved" style="color: #22A338;"></i> Firewall </div>
+<div class="legend-row"><i class="fa-solid fa-network-wired" style="color: ${THEME.AMBER};"></i> Switch </div>
+<div class="legend-row"><i class="fa-solid fa-server" style="color: ${THEME.PURPLE};"></i> Server </div>
 <div class="legend-row"><i class="fa-brands fa-windows" style="color: #0078D4;"></i> Windows </div>
-<div class="legend-row"><i class="fa-solid fa-circle-question" style="color: ${THEME.GRAY};"></i> 未定義 </div>
+<div class="legend-row"><i class="fa-solid fa-circle-question" style="color: ${THEME.GRAY};"></i> Unknow </div>
 
 <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
 
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_OOB}; height: 2px;"></span> 管理界面
+    <span class="edge-line" style="background-color: ${THEME.PORT_OOB}; height: 2px;"></span> OOB
 </div>
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_L4}; height: 2px;"></span> 防火牆埠
+    <span class="edge-line" style="background-color: ${THEME.PORT_L4}; height: 2px;"></span> L4
 </div>
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_AGGREGATE}; height: 4px;"></span> 聚合鏈路
+    <span class="edge-line" style="background-color: ${THEME.PORT_AGGREGATE}; height: 4px;"></span> LACP
 </div>
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_HIGHSPEED}; height: 3px;"></span> 高速(10G+)
+    <span class="edge-line" style="background-color: ${THEME.PORT_HIGHSPEED}; height: 3px;"></span> 10G+
 </div>
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_VLAN}; height: 2px;"></span> VLAN界面
+    <span class="edge-line" style="background-color: ${THEME.PORT_VLAN}; height: 2px;"></span> VLAN
 </div>
 <div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.EDGE_DEFAULT}; height: 2px;"></span> 未定義
+    <span class="edge-line" style="background-color: ${THEME.EDGE_DEFAULT}; height: 2px;"></span> Unknow
 </div>
     `;
     parent.appendChild(legend);

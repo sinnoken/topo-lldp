@@ -130,10 +130,10 @@
           </div>
 
           <div class="flex gap-2 ml-2">
-            <button id="layout-toggle-btn" class="btn btn-secondary btn-sm">
-              Layout: Physics
+            <button id="layout-toggle-btn" class="btn btn-secondary btn-sm w-24">
+              Physics
             </button>
-            <button id="save-layout-btn" class="btn btn-primary btn-sm">Save Layout</button>
+            <button id="save-layout-btn" class="btn btn-primary btn-sm w-24">Save View</button>
 
             <button id="usage-modal-btn" class="btn btn-info btn-sm btn-square" title="User Guide">
               <i class="fa-solid fa-circle-info text-lg"></i>
@@ -170,24 +170,24 @@
 
         <div class="flex-grow flex flex-col min-h-0 gap-2">
           <div class="flex justify-between items-center">
-            <span class="text-[10px] font-mono opacity-50 uppercase tracking-tighter">Raw LLDP / JSON</span>
+            <span class="text-[10px] font-mono opacity-50 uppercase tracking-tighter">Paste Raw LLDP / JSON</span>
             <div class="flex gap-1">
-              <button id="format-data-btn" class="btn btn-xs btn-outline btn-secondary px-1 min-h-0 h-6">格式化</button>
+              <button id="format-data-btn" class="btn btn-xs btn-outline btn-secondary px-1 min-h-0 h-6">format</button>
             </div>
           </div>
-          <textarea id="raw-data-editor" placeholder="在此貼上 LLDP Raw Text..."
+          <textarea id="raw-data-editor" placeholder="Paste LLDP Raw Text ( show lldp neighbors )..."
             class="textarea textarea-bordered font-mono text-[10px] w-full h-1/3 flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
             spellcheck="false"></textarea>
-          <textarea id="data-editor" placeholder="Nodes & Edges JSON"
+          <textarea id="data-editor" placeholder="Paste Nodes & Edges JSON Text"
             class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2"
             spellcheck="false"></textarea>
-          <textarea id="additional-data-editor" placeholder="貼上額外JSON資料..."
+          <textarea id="additional-data-editor" placeholder="Paste Nodes & Edges JSON ext..."
             class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
             spellcheck="false"></textarea>
-          <textarea id="vlan-editor" placeholder="貼上額外vlan資料..."
+          <textarea id="vlan-editor" placeholder="Paste vlan ext..."
             class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
             spellcheck="false"></textarea>
-          <textarea id="vlan-viewer" placeholder="vlan資料"
+          <textarea id="vlan-viewer" placeholder="Paste vlan..."
             class="textarea textarea-bordered font-mono text-[10px] w-full flex-grow leading-tight resize-none focus:outline-none p-2 bg-slate-50"
             spellcheck="false"></textarea>
         </div>
