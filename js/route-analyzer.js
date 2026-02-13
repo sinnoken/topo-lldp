@@ -131,8 +131,8 @@ class NetworkAnalyzer {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
-                    if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.2, viaNode);
-                    if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.8, viaNode);
+                    if (labelFrom) this._drawSingleLabel(ctx, edge, labelFrom, 0.25, viaNode);
+                    if (labelTo) this._drawSingleLabel(ctx, edge, labelTo, 0.75, viaNode);
 
                     ctx.restore();
                 }
@@ -221,78 +221,133 @@ class NetworkAnalyzer {
 
         this.resetVisualization();
 
-        let current = this.nodesRaw.find(n => n.ip === srcIP);
-        if (!current) {
+        const startNode = this.nodesRaw.find(n => n.ip === srcIP);
+        if (!startNode) {
             log.innerHTML = `<div class="p-3 bg-red-50 text-red-600 rounded text-xs">Source IP not found.</div>`;
             return;
         }
 
-        let pathNodes = [current.id], pathEdges = [], visited = new Set();
-        let ttl = 32;
+        // 使用 Set 存儲所有路徑中的節點與邊，以便一次性高亮
+        let allPathNodes = new Set([startNode.id]);
+        let allPathEdges = new Set();
 
-        while (current && ttl > 0) {
-            if (visited.has(current.id) || current.ip === dstIP) break;
-            visited.add(current.id);
-            ttl--;
+        // 佇列：{ currentNode, ttl, visitedNodes }
+        let queue = [{
+            node: startNode,
+            ttl: 32,
+            visited: new Set([startNode.id])
+        }];
 
-            let nextHopIP = null;
+        let reachedDest = false;
+
+        while (queue.length > 0) {
+            let { node, ttl, visited } = queue.shift();
+
+            if (node.ip === dstIP || ttl <= 0) {
+                if (node.ip === dstIP) reachedDest = true;
+                continue;
+            }
+
+            let nextHops = []; // 存儲多個下一跳 IP
             let logInfo = { title: "Routing", badge: "bg-gray-100" };
 
-            if (current.type === 'host') {
-                nextHopIP = current.gateway;
+            // 1. 判斷節點類型與尋找下一跳
+            if (node.type === 'host') {
+                if (node.gateway) nextHops.push(node.gateway);
                 logInfo = { title: "Gateway", badge: "bg-indigo-100 text-indigo-700" };
             } else {
-                const conn = current.interfaces?.find(iface => this.isIpMatch(dstIP, iface.ip, iface.mask));
+                // 直接連線判斷
+                const conn = node.interfaces?.find(iface => this.isIpMatch(dstIP, iface.ip, iface.mask));
                 if (conn) {
-                    nextHopIP = dstIP;
+                    nextHops.push(dstIP);
                     logInfo = { title: "Connected", badge: "bg-blue-100 text-blue-700" };
                 } else {
-                    let best = null;
-                    current.routingTable?.forEach(r => {
+                    // ECMP 邏輯：尋找所有具備相同最長遮罩的路由
+                    let maxMask = -1;
+                    let bestRoutes = [];
+
+                    node.routingTable?.forEach(r => {
                         if (this.isIpMatch(dstIP, r.network, r.mask)) {
-                            if (!best || r.mask > best.mask) best = r;
+                            if (r.mask > maxMask) {
+                                maxMask = r.mask;
+                                bestRoutes = [r];
+                            } else if (r.mask === maxMask) {
+                                bestRoutes.push(r);
+                            }
                         }
                     });
-                    if (best) {
-                        nextHopIP = best.nextHop;
-                        logInfo = { title: `LPM: ${best.network}/${best.mask}`, badge: "bg-emerald-100 text-emerald-700" };
+
+                    if (bestRoutes.length > 0) {
+                        nextHops = bestRoutes.map(r => r.nextHop);
+                        logInfo = {
+                            title: bestRoutes.length > 1 ? `ECMP x${bestRoutes.length}` : `LPM: /${maxMask}`,
+                            badge: bestRoutes.length > 1 ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"
+                        };
                     }
                 }
             }
 
-            if (nextHopIP) {
-                const nextNode = this.nodesRaw.find(n => n.ip === nextHopIP || (n.interfaces?.some(i => i.ip === nextHopIP)));
-                if (nextNode) {
-                    this.renderLogCard(current.id, nextNode.id, logInfo);
-                    // [新增] 如果目前處理的是 Router，自動更新顯示它的表
-                    if (current.type === 'router') {
-                        this.renderRouteTable(current);
-                    }
+            // 2. 處理所有下一跳
+            nextHops.forEach(ip => {
+                const nextNode = this.nodesRaw.find(n => n.ip === ip || (n.interfaces?.some(i => i.ip === ip)));
+
+                if (nextNode && !visited.has(nextNode.id)) {
+                    // 記錄視覺資訊
+                    allPathNodes.add(nextNode.id);
                     const edge = this.edgesRaw.find(e =>
-                        (e.from === current.id && e.to === nextNode.id) ||
-                        (e.to === current.id && e.from === nextNode.id)
+                        (e.from === node.id && e.to === nextNode.id) ||
+                        (e.to === node.id && e.from === nextNode.id)
                     );
-                    if (edge) pathEdges.push(edge.id);
-                    pathNodes.push(nextNode.id);
-                    current = nextNode;
-                } else break;
-            } else break;
+                    if (edge) allPathEdges.add(edge.id);
+
+                    this.renderLogCard(node.id, nextNode.id, logInfo);
+
+                    // 繼續往下追蹤
+                    let newVisited = new Set(visited);
+                    newVisited.add(nextNode.id);
+                    queue.push({ node: nextNode, ttl: ttl - 1, visited: newVisited });
+                }
+            });
         }
 
-        if (current && current.ip === dstIP) {
-            log.insertAdjacentHTML('afterbegin', `<div class="p-3 bg-blue-600 text-white rounded text-xs font-bold mb-2 text-center">Trace Successful</div>`);
+        if (reachedDest) {
+            log.insertAdjacentHTML('afterbegin', `<div class="p-3 bg-blue-600 text-white rounded text-xs font-bold mb-2 text-center">Trace Successful (ECMP Aware)</div>`);
         }
-        this.applyHighlight(pathNodes, pathEdges);
+
+        this.applyHighlight(Array.from(allPathNodes), Array.from(allPathEdges));
     }
 
     applyHighlight(pNodes, pEdges) {
-        pEdges.forEach(eid => this.edges.update({ id: eid, color: { color: '#0400ff' }, width: 3 }));
-        pNodes.forEach(nid => this.nodes.update({
-            id: nid,
-            borderWidth: 2,
-            shadow: { enabled: true, color: 'rgba(0, 110, 255, 0.5)' }
-        }));
-        setTimeout(() => this.network.fit({ nodes: pNodes, animation: { duration: 500 } }), 100);
+        pEdges.forEach(eid => {
+            this.edges.update({
+                id: eid,
+                color: { color: '#4f46e5' }, // 使用 Indigo 色
+                width: 4,
+                arrows: { to: { enabled: true, scaleFactor: 1.2 } },
+                dashes: false // 確保不是虛線
+            });
+        });
+
+        pNodes.forEach(nid => {
+            this.nodes.update({
+                id: nid,
+                borderWidth: 3,
+                color: { border: '#4f46e5' },
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(79, 70, 229, 0.6)',
+                    size: 15
+                }
+            });
+        });
+
+        // 視角縮放包含所有路徑
+        setTimeout(() => {
+            this.network.fit({
+                nodes: pNodes,
+                animation: { duration: 800, easingFunction: 'easeInOutQuad' }
+            });
+        }, 100);
     }
 
     renderLogCard(curr, next, info) {
