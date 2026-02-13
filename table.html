@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <title>VLAN Auditor 專業編輯面板</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body class="bg-base-200 min-h-screen p-6">
+
+    <div class="max-w-7xl mx-auto space-y-4">
+        <div class="navbar bg-base-100 shadow-lg rounded-box px-4">
+            <div class="flex-1 gap-4">
+                <h2 class="text-xl font-bold px-2 text-primary">稽核控制台</h2>
+                <div class="form-control">
+                    <input type="text" id="globalSearch" placeholder="快速搜尋 (設備, VLAN, MAC...)"
+                        class="input input-bordered input-sm w-64" oninput="renderApp()" />
+                </div>
+            </div>
+            <div class="flex-none gap-2">
+                <button class="btn btn-sm btn-ghost" onclick="resetData()">重置資料</button>
+                <button class="btn btn-sm btn-primary" onclick="exportData()">匯出 Excel</button>
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr class="bg-base-200">
+                            <th class="w-20">狀態</th>
+                            <th>設備與介面</th>
+                            <th>VLAN 資訊</th>
+                            <th>MAC 位址 (支援編輯)</th>
+                            <th>廠商 (自動聯動)</th>
+                            <th>描述</th>
+                            <th class="w-32">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬 OUI 資料庫
+        const ouiDB = { "005056": "VMware", "F8C288": "HPE", "0010DB": "Juniper", "00000C": "Cisco" };
+
+        // 初始測試資料
+        let networkData = [
+            { id: 1, device: "Core-SW-01", ip: "10.0.0.1", iface: "ae1", vlanId: 10, vlanName: "Prod", status: "up", mac: "00:50:56:AB:01:23", vendor: "VMware", desc: "主伺服器連線", isEditing: false },
+            { id: 2, device: "Edge-SW-05", ip: "10.0.0.5", iface: "ge-0/0/5", vlanId: 20, vlanName: "Voice", status: "down", mac: "F8:C2:88:99:00:11", vendor: "HPE", desc: "會議室分機", isEditing: false }
+        ];
+
+        // 核心渲染函式
+        function renderApp() {
+            const tbody = document.getElementById('appBody');
+            const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+
+            const filteredData = networkData.filter(item =>
+                Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm))
+            );
+
+            tbody.innerHTML = filteredData.map(item => {
+                if (item.isEditing) {
+                    return `
+                    <tr class="bg-primary/5">
+                        <td><select class="select select-bordered select-xs" id="edit-status-${item.id}">
+                            <option ${item.status === 'up' ? 'selected' : ''}>up</option>
+                            <option ${item.status === 'down' ? 'selected' : ''}>down</option>
+                        </select></td>
+                        <td><div class="font-bold">${item.device}</div><div class="text-xs">${item.iface}</div></td>
+                        <td><input type="number" class="input input-bordered input-xs w-16" id="edit-vlan-${item.id}" value="${item.vlanId}"></td>
+                        <td><input type="text" class="input input-bordered input-xs w-full font-mono" id="edit-mac-${item.id}" value="${item.mac}" oninput="updateVendorPreview(${item.id})"></td>
+                        <td id="preview-vendor-${item.id}" class="text-xs opacity-60">${item.vendor}</td>
+                        <td><input type="text" class="input input-bordered input-xs w-full" id="edit-desc-${item.id}" value="${item.desc}"></td>
+                        <td>
+                            <button class="btn btn-success btn-xs" onclick="saveRow(${item.id})">儲存</button>
+                            <button class="btn btn-ghost btn-xs" onclick="toggleEdit(${item.id})">取消</button>
+                        </td>
+                    </tr>`;
+                }
+
+                return `
+                <tr>
+                    <td><div class="badge ${item.status === 'up' ? 'badge-success' : 'badge-ghost'} badge-sm">${item.status}</div></td>
+                    <td>
+                        <div class="font-bold text-sm">${item.device}</div>
+                        <div class="text-xs font-mono text-blue-600">${item.iface}</div>
+                    </td>
+                    <td><span class="badge badge-outline">ID: ${item.vlanId}</span><div class="text-xs">${item.vlanName}</div></td>
+                    <td class="font-mono text-xs">${item.mac}</td>
+                    <td class="text-xs">${item.vendor}</td>
+                    <td class="max-w-xs truncate text-sm">${item.desc}</td>
+                    <td>
+                        <button class="btn btn-outline btn-primary btn-xs" onclick="toggleEdit(${item.id})">編輯</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // 功能邏輯
+        function toggleEdit(id) {
+            const item = networkData.find(i => i.id === id);
+            item.isEditing = !item.isEditing;
+            renderApp();
+        }
+
+        function updateVendorPreview(id) {
+            const mac = document.getElementById(`edit-mac-${id}`).value;
+            const prefix = mac.replace(/[:.-]/g, "").toUpperCase().substring(0, 6);
+            const vendor = ouiDB[prefix] || "Unknown";
+            document.getElementById(`preview-vendor-${id}`).innerText = vendor;
+        }
+
+        function saveRow(id) {
+            const item = networkData.find(i => i.id === id);
+            item.status = document.getElementById(`edit-status-${id}`).value;
+            item.vlanId = document.getElementById(`edit-vlan-${id}`).value;
+            item.mac = document.getElementById(`edit-mac-${id}`).value;
+
+            // 自動更新廠商
+            const prefix = item.mac.replace(/[:.-]/g, "").toUpperCase().substring(0, 6);
+            item.vendor = ouiDB[prefix] || "Unknown";
+
+            item.desc = document.getElementById(`edit-desc-${id}`).value;
+            item.isEditing = false;
+            renderApp();
+        }
+
+        function exportData() {
+            const ws = XLSX.utils.json_to_sheet(networkData.map(({ isEditing, ...rest }) => rest));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "AuditData");
+            XLSX.writeFile(wb, "audit_export.xlsx");
+        }
+
+        function resetData() { location.reload(); }
+
+        // 初始渲染
+        renderApp();
+    </script>
+</body>
+
+</html>

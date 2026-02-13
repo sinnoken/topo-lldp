@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>vis.js 多圖層終極修正版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/standalone/umd/vis-network.min.js"></script>
+    <style>
+        /* 強制畫布撐開，這是最常見的空白原因 */
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #333;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #toolbar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        #mynetwork {
+            width: 100%;
+            height: 600px;
+            /* 先給予固定高度測試，若有畫面再改回 flex: 1 */
+            flex: 1;
+            background-color: #f4f7f6;
+        }
+
+        .layer-box {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="toolbar">
+        <strong>圖層篩選：</strong>
+        <label class="layer-box"><input type="checkbox" class="layer-trigger" value="physical" checked> 實體層</label>
+        <label class="layer-box"><input type="checkbox" class="layer-trigger" value="network" checked> 網絡層</label>
+        <label class="layer-box"><input type="checkbox" class="layer-trigger" value="app" checked> 應用層</label>
+        <span id="debug-info" style="font-size: 12px; color: #aaa;">狀態: 初始化中...</span>
+    </div>
+
+    <div id="mynetwork"></div>
+
+    <script>
+        window.onload = function () {
+            const container = document.getElementById('mynetwork');
+            const debugInfo = document.getElementById('debug-info');
+
+            // 1. 原始數據
+            const nodesRaw = [
+                { id: 1, label: '核心交換機', group: 'physical', layer: ['physical', 'network'] },
+                { id: 2, label: '伺服器 A', group: 'app', layer: ['physical', 'app'] },
+                { id: 3, label: '純實體', group: 'physical', layer: ['physical'] },
+                { id: 4, label: '虛擬 Router', group: 'network', layer: ['network'] },
+                { id: 5, label: 'Docker 服務', group: 'app', layer: ['network', 'app'] }
+            ];
+
+            const edgesRaw = [
+                { from: 1, to: 2, layer: ['physical'] },
+                { from: 2, to: 4, layer: ['network', 'app'] },
+                { from: 4, to: 5, layer: ['network'] }
+            ];
+
+            // 2. 數據清洗：確保 layer 永遠是陣列
+            const clean = (data) => data.map(item => ({
+                ...item,
+                layer: Array.isArray(item.layer) ? item.layer : (item.layer ? [item.layer] : [])
+            }));
+
+            const nodes = new vis.DataSet(clean(nodesRaw));
+            const edges = new vis.DataSet(clean(edgesRaw));
+
+            // 3. 過濾邏輯 (使用 Set 提升效能)
+            function filterFunction(item) {
+                const checked = Array.from(document.querySelectorAll('.layer-trigger:checked')).map(cb => cb.value);
+                if (checked.length === 0) return false;
+                return item.layer.some(l => checked.includes(l));
+            }
+
+            const nodesView = new vis.DataView(nodes, { filter: filterFunction });
+            const edgesView = new vis.DataView(edges, { filter: filterFunction });
+
+            // 4. 配置 (關閉隱藏渲染，讓它立刻出現)
+            const options = {
+                groups: {
+                    physical: { shape: 'database', color: '#95a5a6' },
+                    network: { shape: 'diamond', color: '#3498db' },
+                    app: { shape: 'dot', color: '#e74c3c' }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: false // 重要：關閉穩定等待，讓圖表立刻跳出來
+                },
+                interaction: { hover: true }
+            };
+
+            // 5. 繪圖
+            try {
+                const network = new vis.Network(container, { nodes: nodesView, edges: edgesView }, options);
+                debugInfo.innerText = "狀態: 繪製完成";
+
+                // 6. 事件綁定
+                document.querySelectorAll('.layer-trigger').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        nodesView.refresh();
+                        edgesView.refresh();
+                        network.fit(); // 每次切換自動縮放
+                    });
+                });
+
+                // 雙重保證：強制重繪
+                setTimeout(() => {
+                    network.redraw();
+                    network.fit();
+                }, 500);
+
+            } catch (e) {
+                debugInfo.innerText = "狀態: 錯誤 - " + e.message;
+                console.error(e);
+            }
+        };
+    </script>
+</body>
+
+</html>

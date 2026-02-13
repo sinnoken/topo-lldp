@@ -45,9 +45,10 @@ class NetworkAnalyzer {
             edges: {
                 arrows: 'to',
                 width: 1,
-                color: { color: '#dddddd', highlight: '#00ff00' },
+                hoverWidth: 1,
+                color: { color: '#dddddd', highlight: '#00ff00', hover: '#ff8800', inherit: false },
                 font: { size: 4, color: '#7a7a7a' },
-                smooth: { type: 'curvedCW', roundness: 0.1 }
+                smooth: { type: 'curvedCW', roundness: 0.05 }
             },
             physics: {
                 enabled: true,
@@ -62,7 +63,6 @@ class NetworkAnalyzer {
             interaction: {
                 hover: true,
                 tooltipDelay: 200,
-                navigationButtons: true
             }
         };
 
@@ -75,6 +75,16 @@ class NetworkAnalyzer {
         // 5. 核心：掛載自定義標籤渲染與事件
         this.network.on("afterDrawing", (ctx) => {
             this.renderCustomLabels(ctx);
+        });
+        this.network.on("click", (params) => {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                // 從類別內部的原始數據找，而不是從 HTML 的全域變數找
+                const nodeData = this.nodesRaw.find(n => n.id === nodeId);
+                this.renderRouteTable(nodeData); // 呼叫類別內部的方法
+            } else {
+                this.renderRouteTable(null); // 沒點到東西時清空
+            }
         });
 
         window.addEventListener('resize', this.handleResize.bind(this));
@@ -254,6 +264,10 @@ class NetworkAnalyzer {
                 const nextNode = this.nodesRaw.find(n => n.ip === nextHopIP || (n.interfaces?.some(i => i.ip === nextHopIP)));
                 if (nextNode) {
                     this.renderLogCard(current.id, nextNode.id, logInfo);
+                    // [新增] 如果目前處理的是 Router，自動更新顯示它的表
+                    if (current.type === 'router') {
+                        this.renderRouteTable(current);
+                    }
                     const edge = this.edgesRaw.find(e =>
                         (e.from === current.id && e.to === nextNode.id) ||
                         (e.to === current.id && e.from === nextNode.id)
@@ -298,4 +312,48 @@ class NetworkAnalyzer {
         </div>`;
         log.insertAdjacentHTML('beforeend', cardHtml);
     }
+
+    // route-analyzer.js
+
+    renderRouteTable(router) {
+        const container = document.getElementById('route-table-container');
+        if (!container) return;
+
+        // 如果點擊的是 host 而不是 router，可以顯示不同的 UI 或清空
+        if (!router || router.type !== 'router') {
+            container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full opacity-20 text-center">
+                <span class="material-symbols-outlined text-4xl">router</span>
+                <p class="text-[10px] font-bold uppercase mt-2">Select a router to view routes</p>
+            </div>`;
+            return;
+        }
+
+        let html = `
+        <div class="mb-3 flex items-center justify-between">
+            <span class="badge badge-primary font-mono text-[10px] py-3">${router.label.replace('\n', ' ')}</span>
+            <span class="text-[9px] opacity-50 font-bold">INTERFACES: ${router.interfaces?.length || 0}</span>
+        </div>
+        <div class="overflow-hidden rounded-lg border border-base-300">
+            <table class="table table-zebra table-xs w-full">
+                <thead>
+                    <tr class="bg-base-200">
+                        <th class="text-[10px]">Destination</th>
+                        <th class="text-[10px]">Next Hop</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${router.routingTable.map(route => `
+                        <tr class="hover">
+                            <td class="font-mono text-[10px]">${route.network}/${route.mask}</td>
+                            <td class="font-mono text-[10px] text-secondary font-bold">${route.nextHop}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+        container.innerHTML = html;
+    }
+
 }
