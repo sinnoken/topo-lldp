@@ -121,6 +121,15 @@
     </footer>
     <script src="js/route-analyzer.js"></script>
     <script>
+        const CONFIG = {
+            STORAGE: {
+                POSITIONS: 'networkNodesPosition',
+                DATA: 'networkTopologyData',
+                ARP_MAP: 'networkArpMap',
+                EXPIRY: 'storageExpiry'  // 過期時間戳
+            },
+            STORAGE_EXPIRY_MS: 1 * 8 * 60 * 60 * 1000,  // 8小時（毫秒）
+        }
         const NETWORK_TOPOLOGY = {
             nodes: [
                 { id: 'H1', label: 'HQ Host\n192.168.1.10', group: 'HQ', type: 'host', ip: '192.168.1.10', mask: 24, gateway: '192.168.1.1' },
