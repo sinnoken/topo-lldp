@@ -75,8 +75,9 @@ const CONFIG = {
         }
     },
     GROUP_RULES: {
-        FIREWALL: /(FGT|FTG|FG)/i,
-        SWITCH: /^[A-Z]{2,5}_(?:NOC|OSS|OA)_[A-Z]\d{1,4}/i,
+        FIREWALL: /(FW|FG|FGT|FTG)/i,
+        SWITCH: /^[A-Z0-9]{2,5}_(?:SW|ACC|DIST|NOC|OSS|OA|CORE)_/i,
+        // SWITCH: /^[A-Z]{2,5}_(?:SW|NOC|OSS|OA|CORE)_[A-Z]\d{1,4}/i,
         WINDOWS: /^(DESKTOP|WINDOWS|PC|NB)-/i,
         MAC_ADDRESS: /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$|^([0-9A-F]{4}\.[0-9A-F]{4}\.[0-9A-F]{4})$/i
     },
@@ -226,13 +227,6 @@ function getInitialData() {
     };
 }
 
-
-function toCompactJSON(obj) {
-    if (!obj.nodes || !obj.edges) return JSON.stringify(obj, null, 2);
-    const nodesStr = obj.nodes.map(n => `    ${JSON.stringify(n)}`).join(",\n");
-    const edgesStr = obj.edges.map(e => `    ${JSON.stringify(e)}`).join(",\n");
-    return `{\n  "nodes": [\n${nodesStr}\n  ],\n  "edges": [\n${edgesStr}\n  ]\n}`;
-}
 
 // --- 4. 拓樸渲染邏輯 ---
 
@@ -487,68 +481,6 @@ function convertLldpToJson(rawText) {
 
 // --- 6. 初始化 App ---
 function initApp() {
-
-    // --- 新增：自動注入圖例樣式 ---
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .network-container-wrapper { position: relative; width: 100%; height: 100%; }
-        .network-legend {
-            position: absolute;
-            bottom: 50px;  /* 放在左下角，避開右上角的按鈕區 */
-            left: 20px;
-            background: rgba(255, 255, 255, 0.85);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #CFD8DC;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 10;
-            pointer-events: none; /* 不干擾地圖拖拽 */
-            font-family: "Segoe UI", sans-serif;
-        }
-        .legend-title { font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #37474F; border-bottom: 1px solid #ECEFF1; padding-bottom: 4px; }
-        .legend-row { display: flex; align-items: center; margin: 4px 0; font-size: 12px; color: #546E7A; }
-        .legend-row i { width: 20px; margin-right: 8px; text-align: center; font-size: 14px; }
-    `;
-    document.head.appendChild(style);
-
-    // --- 新增：動態建立圖例 DOM ---
-    const container = document.getElementById("mynetwork");
-    const parent = container.parentElement;
-
-    // 建立一個 Wrapper 確保定位正確
-    if (parent.style.position !== 'relative') parent.style.position = 'relative';
-
-    const legend = document.createElement('div');
-    legend.className = 'network-legend';
-    legend.innerHTML = `
-<div class="legend-row"><i class="fa-solid fa-shield-halved" style="color: #22A338;"></i> Firewall </div>
-<div class="legend-row"><i class="fa-solid fa-network-wired" style="color: ${THEME.AMBER};"></i> Switch </div>
-<div class="legend-row"><i class="fa-solid fa-server" style="color: ${THEME.PURPLE};"></i> Server </div>
-<div class="legend-row"><i class="fa-brands fa-windows" style="color: #0078D4;"></i> Windows </div>
-<div class="legend-row"><i class="fa-solid fa-circle-question" style="color: ${THEME.GRAY};"></i> Unknow </div>
-
-<hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
-
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_OOB}; height: 2px;"></span> OOB
-</div>
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_L4}; height: 2px;"></span> L4
-</div>
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_AGGREGATE}; height: 4px;"></span> LACP
-</div>
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_HIGHSPEED}; height: 3px;"></span> 10G+
-</div>
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.PORT_VLAN}; height: 2px;"></span> VLAN
-</div>
-<div class="legend-row">
-    <span class="edge-line" style="background-color: ${THEME.EDGE_DEFAULT}; height: 2px;"></span> Unknow
-</div>
-    `;
-    parent.appendChild(legend);
 
     // 建議定義一個字體變數方便維護
     const FONT_FACE = "arial";
@@ -856,16 +788,6 @@ function initApp() {
             }
         });
     });
-
-    // 搜尋輸入框：Enter 鍵快速搜尋
-    const searchInput = document.getElementById("search-node-input");
-    if (searchInput) {
-        searchInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                searchNodeById();
-            }
-        });
-    }
     // 檢查是否為第一次使用 (或是瀏覽器快取已被清除)
     const hasSeenIntro = localStorage.getItem('hasSeenNetworkIntro');
     if (!hasSeenIntro) {
@@ -874,22 +796,6 @@ function initApp() {
             modal.showModal();
             localStorage.setItem('hasSeenNetworkIntro', 'true');
         }
-    }
-
-    const vlanSearchInput = document.getElementById("search-vlan-input");
-    if (vlanSearchInput) {
-        vlanSearchInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                searchVlan();
-            }
-        });
-
-        // 如果你希望輸入時就即時反應（防抖版）
-        vlanSearchInput.addEventListener("input", debounce(() => {
-            if (vlanSearchInput.value.trim() !== "") {
-                searchVlan();
-            }
-        }, 500));
     }
 }
 
@@ -1178,4 +1084,12 @@ function searchVlan() {
             showCopyTooltip(`找不到 VLAN ${vlanId}`);
         }
     }
+}
+
+
+function toCompactJSON(obj) {
+    if (!obj.nodes || !obj.edges) return JSON.stringify(obj, null, 2);
+    const nodesStr = obj.nodes.map(n => `    ${JSON.stringify(n)}`).join(",\n");
+    const edgesStr = obj.edges.map(e => `    ${JSON.stringify(e)}`).join(",\n");
+    return `{\n  "nodes": [\n${nodesStr}\n  ],\n  "edges": [\n${edgesStr}\n  ]\n}`;
 }
