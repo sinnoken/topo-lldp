@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" id="metaDesc" content="">
+<title>景深計算器</title>
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:#f7f9fc; --card:#fff; --sunken:#eef2f8;
+  --fg:#0f1929; --muted:#5a6b84; --faint:#8b9ab0;
+  --line:#e1e8f2; --line2:#c9d5e5;
+  --brand:#2563eb; --brand-soft:#2563eb14;
+  --ok:#15803d; --ok-bg:#dcfce7; --ok-line:#22c55e;
+  --no:#be123c; --no-bg:#ffe4e6; --no-line:#f43f5e;
+  --warn:#a16207;
+  --r1:10px; --r2:16px; --r3:24px;
+  --sh:0 1px 3px #0f172a0f,0 10px 30px #0f172a0d;
+  --mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0a1120; --card:#141d2e; --sunken:#0f1728;
+  --fg:#eaf1fc; --muted:#9db0c9; --faint:#6d809b;
+  --line:#243149; --line2:#33435f;
+  --brand:#60a5fa; --brand-soft:#60a5fa1a;
+  --ok:#4ade80; --ok-bg:#052e16; --ok-line:#22c55e;
+  --no:#fb7185; --no-bg:#3f0d1a; --no-line:#f43f5e;
+  --warn:#fbbf24;
+  --sh:0 1px 3px #0008,0 12px 36px #0005;
+}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC","Noto Sans JP","PingFang TC",sans-serif;
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2{margin:0;line-height:1.25;text-wrap:balance}
+p{margin:0}
+:where(button,select,input):focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.wrap{max-width:820px;margin-inline:auto;padding:clamp(16px,4vw,36px) clamp(16px,4vw,28px)}
+
+.localebar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px}
+.localebar select{width:auto;padding:6px 10px;font-size:.82rem;border-radius:999px;
+  background:var(--card);border:1px solid var(--line2);color:var(--muted);cursor:pointer}
+
+.step{background:var(--card);border:1px solid var(--line);border-radius:var(--r3);
+  padding:clamp(18px,3vw,26px);box-shadow:var(--sh);margin-bottom:16px}
+.step__head{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+.step__num{flex:none;width:27px;height:27px;border-radius:50%;background:var(--brand);
+  color:#fff;font-size:.86rem;font-weight:800;display:grid;place-items:center}
+.step__title{font-size:1.08rem;font-weight:750}
+.step__sub{color:var(--muted);font-size:.89rem;margin:0 0 16px 38px}
+@media (max-width:520px){.step__sub{margin-inline-start:0}}
+
+.masthead{text-align:center;padding-bottom:6px}
+.masthead h1{font-size:clamp(1.45rem,4.2vw,2rem);font-weight:800;letter-spacing:-.02em}
+.masthead p{color:var(--muted);margin-top:8px;font-size:.95rem}
+
+.verdict{border-radius:var(--r3);padding:clamp(18px,3vw,26px);margin-bottom:16px;
+  border:2px solid var(--ok-line);background:var(--ok-bg);box-shadow:var(--sh)}
+.verdict[data-ok=false]{border-color:var(--no-line);background:var(--no-bg)}
+.verdict__flag{display:flex;align-items:center;gap:9px;font-weight:800;font-size:1.1rem;color:var(--ok)}
+.verdict[data-ok=false] .verdict__flag{color:var(--no)}
+.verdict__icon{font-size:1.3rem}
+.verdict__msg{margin-top:7px;font-size:.93rem;opacity:.85}
+.answer{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+@media (max-width:460px){.answer{grid-template-columns:1fr}}
+.answer__cell{background:var(--card);border-radius:var(--r2);padding:14px 16px;border:1px solid var(--line)}
+.answer__cell--wide{grid-column:1/-1}
+.answer__cell--wide .answer__v{font-size:1.25rem}
+.answer__k{display:block;font-size:.8rem;color:var(--muted);font-weight:650}
+.answer__v{display:block;font-family:var(--mono);font-size:1.7rem;font-weight:800;
+  font-variant-numeric:tabular-nums;margin-top:2px;letter-spacing:-.02em}
+.answer__note{display:block;font-size:.76rem;color:var(--faint);margin-top:1px}
+.exp-warn{color:var(--warn);font-weight:650}
+
+.ruler{position:relative;height:116px;border-radius:var(--r2);background:var(--sunken);
+  border:1px solid var(--line);overflow:hidden;margin-top:4px}
+.ruler__dof{position:absolute;top:0;bottom:22px;background:#22c55e2e;
+  border-inline:2px solid var(--ok-line);transition:left .2s,width .2s}
+.ruler__target{position:absolute;top:22px;bottom:44px;border:2px dashed var(--brand);
+  border-radius:7px;transition:left .2s,width .2s}
+.ruler__tlabel{position:absolute;top:2px;font-size:.72rem;font-weight:700;color:var(--brand);
+  transform:translateX(-50%);white-space:nowrap;transition:left .2s}
+.ruler__focus{position:absolute;top:0;bottom:22px;width:2px;background:var(--fg);transition:left .2s}
+.ruler__focus::after{content:"▼";position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+  font-size:.62rem;color:var(--fg)}
+.ruler__ticks{position:absolute;inset-inline:0;bottom:0;height:22px;display:flex;
+  justify-content:space-between;align-items:center;padding-inline:6px;
+  border-top:1px solid var(--line);font-family:var(--mono);font-size:.68rem;color:var(--faint)}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.key i{display:inline-block;width:15px;height:11px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+
+.fields{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f__label{font-size:.88rem;font-weight:700}
+.f__hint{font-size:.77rem;color:var(--faint);min-height:1.1em}
+.f__hint--warn{color:var(--warn);font-weight:650}
+select,input[type=number]{width:100%;min-width:0;padding:10px 11px;font:inherit;font-size:.95rem;
+  color:var(--fg);background:var(--sunken);border:1px solid var(--line2);border-radius:var(--r1)}
+input[type=number]{font-family:var(--mono);font-variant-numeric:tabular-nums}
+input[aria-invalid=true]{border-color:var(--no)}
+.pair{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:7px}
+.pair span{color:var(--faint);font-size:.85rem}
+
+.slide{display:flex;flex-direction:column;gap:7px}
+.slide__top{display:flex;justify-content:space-between;align-items:baseline}
+.slide__val{font-family:var(--mono);font-weight:800;font-size:1.05rem;color:var(--brand)}
+input[type=range]{width:100%;accent-color:var(--brand);height:24px}
+.slide__ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--faint);font-family:var(--mono)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:inherit;font-size:.85rem;font-weight:700;cursor:pointer;padding:7px 13px;
+  border-radius:999px;border:1px solid var(--line2);background:var(--sunken);color:var(--muted);transition:.14s}
+.chip:hover{border-color:var(--brand);color:var(--fg)}
+.chip[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#fff}
+
+.acts{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.btn{font:inherit;font-size:.88rem;font-weight:700;cursor:pointer;padding:10px 16px;
+  border-radius:var(--r1);border:1px solid transparent;transition:.14s}
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn--go{background:var(--brand);color:#fff}
+.btn--sub{background:transparent;color:var(--muted);border-color:var(--line2)}
+
+details{margin-top:14px;border:1px solid var(--line);border-radius:var(--r2);
+  background:var(--sunken);overflow:hidden}
+summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:.9rem;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"▾";color:var(--faint);transition:transform .2s}
+details[open] summary::after{transform:rotate(180deg)}
+.details__body{padding:0 16px 16px}
+
+.tscroll{overflow-x:auto;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:420px}
+th,td{padding:8px 9px;text-align:end;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-size:.78rem;font-weight:650;white-space:nowrap}
+th:first-child,td:first-child{text-align:start;font-family:var(--mono);font-weight:700}
+tbody tr[data-now=true]{background:var(--brand-soft)}
+.good{color:var(--ok);font-weight:700}
+.bad{color:var(--no)}
+.mini{color:var(--muted);font-size:.85rem;margin-top:12px}
+.mini dt{font-weight:700;color:var(--fg);margin-top:9px}
+.mini dd{margin:1px 0 0;margin-inline-start:0}
+.foot{text-align:center;color:var(--faint);font-size:.8rem;padding-bottom:32px}
+@media print{.acts,.chips,.localebar{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="localebar">
+  <select id="lang" aria-label="Language"></select>
+  <select id="unit" aria-label="Units"></select>
+</div>
+
+<header class="masthead">
+  <h1 data-i18n="app.title"></h1>
+  <p data-i18n="app.tagline"></p>
+</header>
+
+<section class="verdict" id="verdict" aria-live="polite">
+  <div class="verdict__flag"><span class="verdict__icon" id="vIcon">✓</span><span id="vFlag"></span></div>
+  <p class="verdict__msg" id="vMsg"></p>
+  <div class="answer">
+    <div class="answer__cell">
+      <span class="answer__k" data-i18n="answer.focus"></span>
+      <span class="answer__v" id="aFocus">—</span>
+      <span class="answer__note" id="aFocusNote"></span>
+    </div>
+    <div class="answer__cell">
+      <span class="answer__k" data-i18n="answer.stop"></span>
+      <span class="answer__v" id="aStop">—</span>
+      <span class="answer__note" id="aStopNote"></span>
+    </div>
+    <div class="answer__cell answer__cell--wide">
+      <span class="answer__k" data-i18n="answer.exposure"></span>
+      <span class="answer__v" id="aExp">—</span>
+      <span class="answer__note" id="aExpNote"></span>
+    </div>
+  </div>
+  <div class="acts">
+    <button class="btn btn--go"  type="button" id="btnApply" data-i18n="btn.apply"></button>
+    <button class="btn btn--sub" type="button" id="btnLink"  data-i18n="btn.link"></button>
+    <button class="btn btn--sub" type="button" id="btnReset" data-i18n="btn.reset"></button>
+  </div>
+</section>
+
+<section class="step">
+  <div class="step__head"><span class="step__num">1</span><h2 class="step__title" data-i18n="step1.title"></h2></div>
+  <p class="step__sub" data-i18n="step1.sub"></p>
+  <div class="fields">
+    <div class="f">
+      <span class="f__label" data-i18n="field.range"></span>
+      <div class="pair">
+        <input id="near" type="number" min="0.1" step="0.5" data-i18n-aria="a11y.near">
+        <span data-i18n="field.rangeTo"></span>
+        <input id="far"  type="number" min="0.2" step="0.5" data-i18n-aria="a11y.far">
+      </div>
+      <p class="f__hint" id="rangeHint"></p>
+    </div>
+    <div class="f">
+      <span class="f__label" data-i18n="field.scenarios"></span>
+      <div class="chips" id="scenarios"></div>
+      <p class="f__hint" data-i18n="hint.scenarios"></p>
+    </div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="step__head"><span class="step__num">2</span><h2 class="step__title" data-i18n="step2.title"></h2></div>
+  <p class="step__sub" data-i18n="step2.sub"></p>
+  <div class="fields">
+    <div class="f">
+      <label class="f__label" for="sensor" data-i18n="field.sensor"></label>
+      <select id="sensor"></select>
+      <p class="f__hint" id="sensorHint"></p>
+    </div>
+    <div class="f">
+      <label class="f__label" for="focal" data-i18n="field.focal"></label>
+      <select id="focal"></select>
+      <p class="f__hint" id="focalHint"></p>
+    </div>
+    <div class="f">
+      <label class="f__label" for="framing" data-i18n="field.framing"></label>
+      <select id="framing"></select>
+      <p class="f__hint" id="framingHint"></p>
+    </div>
+    <div class="f">
+      <label class="f__label" for="quality" data-i18n="field.quality"></label>
+      <select id="quality"></select>
+      <p class="f__hint" id="qualityHint"></p>
+    </div>
+    <div class="f">
+      <label class="f__label" for="iso" data-i18n="field.iso"></label>
+      <select id="iso"></select>
+      <p class="f__hint" id="isoHint"></p>
+    </div>
+    <div class="f">
+      <label class="f__label" for="compensate" data-i18n="field.compensate"></label>
+      <select id="compensate"></select>
+      <p class="f__hint" id="compHint"></p>
+    </div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="step__head"><span class="step__num">3</span><h2 class="step__title" data-i18n="step3.title"></h2></div>
+  <p class="step__sub" data-i18n="step3.sub"></p>
+
+  <div class="ruler" role="img" id="ruler" data-i18n-aria="a11y.ruler">
+    <div class="ruler__dof" id="rDof"></div>
+    <div class="ruler__target" id="rTarget"></div>
+    <div class="ruler__tlabel" id="rLabel"></div>
+    <div class="ruler__focus" id="rFocus"></div>
+    <div class="ruler__ticks" id="rTicks"></div>
+  </div>
+  <div class="key">
+    <span><i style="background:#22c55e4d;border:1px solid var(--ok-line)"></i><span data-i18n="key.dof"></span></span>
+    <span><i style="border:2px dashed var(--brand)"></i><span data-i18n="key.target"></span></span>
+    <span><i style="width:3px;background:var(--fg)"></i><span data-i18n="key.focus"></span></span>
+  </div>
+
+  <div class="fields" style="margin-top:20px">
+    <div class="slide">
+      <div class="slide__top"><span class="f__label" data-i18n="field.aperture"></span><span class="slide__val" id="apVal"></span></div>
+      <input type="range" id="apRange" min="0" step="1">
+      <div class="slide__ends"><span data-i18n="slider.apLow"></span><span data-i18n="slider.apHigh"></span></div>
+      <p class="f__hint" id="apHint"></p>
+    </div>
+    <div class="slide">
+      <div class="slide__top"><span class="f__label" data-i18n="field.shutter"></span><span class="slide__val" id="shVal"></span></div>
+      <input type="range" id="shRange" min="0" step="1">
+      <div class="slide__ends"><span data-i18n="slider.shLow"></span><span data-i18n="slider.shHigh"></span></div>
+      <p class="f__hint" id="shHint"></p>
+    </div>
+    <div class="slide">
+      <div class="slide__top"><span class="f__label" data-i18n="field.focusDist"></span><span class="slide__val" id="fdVal"></span></div>
+      <input type="range" id="fdRange" min="0.5" step="0.1">
+      <div class="slide__ends"><span id="fdMin"></span><span id="fdMax"></span></div>
+      <p class="f__hint" id="fdHint"></p>
+    </div>
+  </div>
+
+  <details>
+    <summary data-i18n="details.advanced"></summary>
+    <div class="details__body">
+      <div class="fields">
+        <div class="f">
+          <span class="f__label" data-i18n="field.sensorSize"></span>
+          <div class="pair">
+            <input id="sw" type="number" min="1" step="0.01" data-i18n-aria="a11y.width">
+            <span>×</span>
+            <input id="sh" type="number" min="1" step="0.01" data-i18n-aria="a11y.height">
+          </div>
+          <p class="f__hint" data-i18n="hint.autoFill"></p>
+        </div>
+        <div class="f">
+          <label class="f__label" for="mp" data-i18n="field.mp"></label>
+          <input id="mp" type="number" min="1" step="1">
+          <p class="f__hint" id="mpHint"></p>
+        </div>
+        <div class="f">
+          <label class="f__label" for="coc" data-i18n="field.coc"></label>
+          <input id="coc" type="number" min="0.001" step="0.001" readonly>
+          <p class="f__hint" id="cocHint"></p>
+        </div>
+        <div class="f">
+          <label class="f__label" for="focalNum" data-i18n="field.customFocal"></label>
+          <input id="focalNum" type="number" min="1" step="1">
+          <p class="f__hint" data-i18n="hint.customFocal"></p>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i18n="details.table"></summary>
+    <div class="details__body">
+      <div class="tscroll">
+        <table>
+          <thead><tr>
+            <th data-i18n="th.aperture"></th><th data-i18n="th.nearest"></th>
+            <th data-i18n="th.farthest"></th><th data-i18n="th.dof"></th><th data-i18n="th.enough"></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="mini" data-i18n="note.diffraction"></p>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i18n="details.glossary"></summary>
+    <div class="details__body"><dl class="mini" id="glossary"></dl></div>
+  </details>
+</section>
+
+<p class="foot" data-i18n="foot.privacy"></p>
+</div>
+
+<script>
+"use strict";
+(function(){
+
+/* ═════════════════════════════════════════════════
+   1. i18n — message catalogues
+   ═════════════════════════════════════════════════ */
+const MESSAGES={
+"zh-Hant":{
+ "meta.title":"該對焦在哪？該用什麼光圈？· 景深計算器",
+ "meta.desc":"輸入要拍的距離範圍，馬上知道該用什麼光圈、對焦在哪裡。",
+ "app.title":"該對焦在哪？該用什麼光圈？",
+ "app.tagline":"告訴我你要拍多遠到多遠，其他交給我算。",
+ "answer.focus":"對焦距離","answer.stop":"最小可用光圈","answer.exposure":"曝光組合",
+ "answer.hyper":"超焦距 {v}","answer.theory":"理論值 {v}","answer.theoryDiff":"理論值 {v}，已進入繞射",
+ "answer.impossible":"辦不到","answer.impossibleNote":"即使縮到最小光圈也不夠",
+ "answer.expNote":"與原設定等量曝光","answer.expClipped":"已達上下限，曝光相差 {v} 級",
+ "verdict.okFlag":"這組設定拍得到","verdict.okMsg":"{near}–{far} 全都在清楚範圍內。",
+ "verdict.okSafe":"想更保險可以再縮一級光圈。","verdict.okDiff":"不過光圈已縮過頭，畫面整體銳利度會下降。",
+ "verdict.noFlag":"這組設定拍不到","verdict.noFeasible":"照上面兩個數字調整就能涵蓋 {near}–{far}。",
+ "verdict.noImpossible":"這顆鏡頭在這個距離拍不出這麼深的景深，建議換更廣的焦距或退後拍攝。",
+ "verdict.badFlag":"距離填反了","verdict.badMsg":"最遠距離要比最近距離大。",
+ "btn.apply":"一鍵套用這組設定","btn.link":"複製連結","btn.linkDone":"已複製 ✓",
+ "btn.linkFail":"請手動複製網址","btn.reset":"重來",
+ "step1.title":"你要拍多遠到多遠？","step1.sub":"從最近的主體到最遠的主體，這段距離內都要清楚。",
+ "step2.title":"你用什麼器材？","step2.sub":"相機片幅和鏡頭焦距會直接決定景深深淺。",
+ "step3.title":"實際拍攝設定","step3.sub":"拉動看看綠色範圍有沒有蓋住虛線框，蓋住就成功。",
+ "field.range":"距離範圍","field.rangeTo":"到","field.scenarios":"常見情境",
+ "field.sensor":"相機片幅","field.focal":"鏡頭焦距","field.framing":"換片幅時","field.quality":"畫質要求",
+ "field.iso":"ISO 感光度","field.compensate":"改光圈時",
+ "field.aperture":"光圈","field.shutter":"快門","field.focusDist":"對焦距離",
+ "field.sensorSize":"感光元件尺寸（mm）","field.mp":"有效像素（MP）",
+ "field.coc":"容許模糊圈（mm）","field.customFocal":"自訂焦距（mm）",
+ "hint.scenarios":"點一下快速帶入","hint.needDof":"需要 {v} 的景深","hint.badRange":"最遠要大於最近",
+ "hint.crop":"裁切係數約 {v}×","hint.customSize":"自訂尺寸","hint.equiv":"等效 {e} mm 視角",
+ "hint.equivSnap":"等效 {e} mm｜理想 {i} mm，已選最接近的 {c} mm",
+ "hint.framingFov":"換片幅會自動換成最接近的焦距，維持相同構圖",
+ "hint.framingFocal":"小片幅用同焦距＝望遠效果，景深反而變淺",
+ "hint.diffLimit":"繞射界線約 {v}","hint.diffOver":"已超過繞射界線 {v}，銳利度會下降",
+ "hint.focusOk":"目前位置可涵蓋目標","hint.focusMove":"建議移到 {v}",
+ "hint.autoFill":"選了片幅會自動帶入","hint.pitch":"像素間距約 {v} µm",
+ "hint.cocAuto":"由畫質要求自動計算","hint.cocPixel":"由像素間距自動計算",
+ "hint.customFocal":"清單沒有的焦距填這裡",
+ "hint.iso":"基準感光度，曝光補償從這裡算起",
+ "hint.compIso":"縮光圈時自動拉高 ISO，維持相同亮度",
+ "hint.compShutter":"縮光圈時自動放慢快門，維持相同亮度",
+ "hint.compOff":"光圈改變時不自動調整，畫面會變暗或變亮",
+ "hint.shutterOk":"快門 {v}，手持安全線約 {s}",
+ "hint.shutterSlow":"快門 {v} 已低於手持安全線 {s}，建議用腳架",
+ "key.dof":"實際清楚的範圍","key.target":"你要拍的範圍","key.focus":"對焦點","ruler.target":"要拍的範圍",
+ "slider.apLow":"f/1.0 淺","slider.apHigh":"f/32 深",
+ "slider.shLow":"30s 慢","slider.shHigh":"1/8000 快",
+ "details.advanced":"進階：自訂尺寸與模糊圈","details.table":"各光圈對照表","details.glossary":"這些數字是什麼意思？",
+ "th.aperture":"光圈","th.nearest":"最近清楚","th.farthest":"最遠清楚","th.dof":"景深","th.enough":"夠不夠",
+ "note.diffraction":"△ 代表已進入繞射範圍，光圈再縮小整體銳利度反而會下降。",
+ "foot.privacy":"全部在你的瀏覽器計算，不會上傳任何資料。",
+ "a11y.near":"最近距離","a11y.far":"最遠距離","a11y.width":"寬","a11y.height":"高","a11y.ruler":"景深覆蓋示意圖",
+ "unit.m":"m","unit.ft":"ft","unit.infinity":"無限遠","unit.optM":"公尺 (m)","unit.optFt":"英尺 (ft)",
+ "sensor.mf":"中片幅 44×33","sensor.ff":"全片幅 36×24","sensor.apsh":"APS-H 28.7×19",
+ "sensor.apsc":"APS-C 23.6×15.7","sensor.apscC":"APS-C Canon 22.3×14.9","sensor.m43":"M4/3 17.3×13",
+ "sensor.one":"1 吋 13.2×8.8","sensor.i17":"1/1.7 吋 7.6×5.7","sensor.i23":"1/2.3 吋 6.17×4.55",
+ "sensor.i28":"1/2.8 吋 5.6×4.2（監控）","sensor.i30":"1/3 吋 4.8×3.6（監控）",
+ "quality.screen":"手機／網路瀏覽（寬鬆）","quality.screen.hint":"標準值放寬一倍，最容易達成",
+ "quality.normal":"一般輸出（標準）","quality.normal.hint":"傳統片幅慣用值，多數情況適用",
+ "quality.print":"大圖輸出（嚴格）","quality.print.hint":"標準值收緊，放大後仍要銳利",
+ "quality.pixel":"像素級（最嚴格）","quality.pixel.hint":"以感光元件像素間距 ×2 計算",
+ "framing.focal":"沿用同一顆鏡頭（視角會變）","framing.fov":"保持相同視角（自動換算焦距）",
+ "comp.iso":"自動調 ISO","comp.shutter":"自動調快門","comp.off":"不補償（手動）",
+ "scenario.group":"合照","scenario.street":"街拍","scenario.event":"活動",
+ "scenario.landscape":"風景","scenario.cctv":"監控",
+ "gloss.focus":"對焦距離","gloss.focus.body":"相機對焦在哪個距離。不是對在最近或最遠，而是對在能前後平均分配清晰範圍的位置。",
+ "gloss.stop":"最小可用光圈","gloss.stop.body":"f 值最小到這裡，再開大景深就不夠。數字越大光圈越小、景深越深。",
+ "gloss.coc":"容許模糊圈","gloss.coc.body":"一個點在感光元件上可以糊到多大，人眼還是覺得它清楚。這是主觀標準，不是物理界線。",
+ "gloss.hyper":"超焦距","gloss.hyper.body":"對焦在這個距離時，從它的一半到無限遠都會清楚。拍風景常用。",
+ "gloss.diff":"繞射","gloss.diff.body":"光圈縮太小會因為繞射讓整張照片變鈍。表格中的 △ 就是提醒你已經越線。",
+ "gloss.exposure":"曝光補償","gloss.exposure.body":"縮小光圈會讓進光量變少。補償的做法是提高 ISO 或放慢快門，讓亮度維持不變。"
+},
+"zh-Hans":{
+ "meta.title":"该对焦在哪？该用什么光圈？· 景深计算器",
+ "meta.desc":"输入要拍的距离范围，马上知道该用什么光圈、对焦在哪里。",
+ "app.title":"该对焦在哪？该用什么光圈？",
+ "app.tagline":"告诉我你要拍多远到多远，其他交给我算。",
+ "answer.focus":"对焦距离","answer.stop":"最小可用光圈","answer.exposure":"曝光组合",
+ "answer.hyper":"超焦距 {v}","answer.theory":"理论值 {v}","answer.theoryDiff":"理论值 {v}，已进入衍射",
+ "answer.impossible":"办不到","answer.impossibleNote":"即使缩到最小光圈也不够",
+ "answer.expNote":"与原设置等量曝光","answer.expClipped":"已达上下限，曝光相差 {v} 级",
+ "verdict.okFlag":"这组设置拍得到","verdict.okMsg":"{near}–{far} 全都在清晰范围内。",
+ "verdict.okSafe":"想更保险可以再缩一级光圈。","verdict.okDiff":"不过光圈已缩过头，画面整体锐度会下降。",
+ "verdict.noFlag":"这组设置拍不到","verdict.noFeasible":"照上面两个数字调整就能涵盖 {near}–{far}。",
+ "verdict.noImpossible":"这颗镜头在这个距离拍不出这么深的景深，建议换更广的焦距或退后拍摄。",
+ "verdict.badFlag":"距离填反了","verdict.badMsg":"最远距离要比最近距离大。",
+ "btn.apply":"一键套用这组设置","btn.link":"复制链接","btn.linkDone":"已复制 ✓",
+ "btn.linkFail":"请手动复制网址","btn.reset":"重来",
+ "step1.title":"你要拍多远到多远？","step1.sub":"从最近的主体到最远的主体，这段距离内都要清晰。",
+ "step2.title":"你用什么器材？","step2.sub":"相机画幅和镜头焦距会直接决定景深深浅。",
+ "step3.title":"实际拍摄设置","step3.sub":"拉动看看绿色范围有没有盖住虚线框，盖住就成功。",
+ "field.range":"距离范围","field.rangeTo":"到","field.scenarios":"常见场景",
+ "field.sensor":"相机画幅","field.focal":"镜头焦距","field.framing":"换画幅时","field.quality":"画质要求",
+ "field.iso":"ISO 感光度","field.compensate":"改光圈时",
+ "field.aperture":"光圈","field.shutter":"快门","field.focusDist":"对焦距离",
+ "field.sensorSize":"传感器尺寸（mm）","field.mp":"有效像素（MP）",
+ "field.coc":"弥散圆直径（mm）","field.customFocal":"自定焦距（mm）",
+ "hint.scenarios":"点一下快速带入","hint.needDof":"需要 {v} 的景深","hint.badRange":"最远要大于最近",
+ "hint.crop":"裁切系数约 {v}×","hint.customSize":"自定尺寸","hint.equiv":"等效 {e} mm 视角",
+ "hint.equivSnap":"等效 {e} mm｜理想 {i} mm，已选最接近的 {c} mm",
+ "hint.framingFov":"换画幅会自动换成最接近的焦距，保持相同构图",
+ "hint.framingFocal":"小画幅用同焦距＝长焦效果，景深反而变浅",
+ "hint.diffLimit":"衍射界线约 {v}","hint.diffOver":"已超过衍射界线 {v}，锐度会下降",
+ "hint.focusOk":"当前位置可涵盖目标","hint.focusMove":"建议移到 {v}",
+ "hint.autoFill":"选了画幅会自动带入","hint.pitch":"像素间距约 {v} µm",
+ "hint.cocAuto":"由画质要求自动计算","hint.cocPixel":"由像素间距自动计算",
+ "hint.customFocal":"列表没有的焦距填这里",
+ "hint.iso":"基准感光度，曝光补偿从这里算起",
+ "hint.compIso":"缩光圈时自动拉高 ISO，保持相同亮度",
+ "hint.compShutter":"缩光圈时自动放慢快门，保持相同亮度",
+ "hint.compOff":"光圈改变时不自动调整，画面会变暗或变亮",
+ "hint.shutterOk":"快门 {v}，手持安全线约 {s}",
+ "hint.shutterSlow":"快门 {v} 已低于手持安全线 {s}，建议用三脚架",
+ "key.dof":"实际清晰的范围","key.target":"你要拍的范围","key.focus":"对焦点","ruler.target":"要拍的范围",
+ "slider.apLow":"f/1.0 浅","slider.apHigh":"f/32 深",
+ "slider.shLow":"30s 慢","slider.shHigh":"1/8000 快",
+ "details.advanced":"进阶：自定尺寸与弥散圆","details.table":"各光圈对照表","details.glossary":"这些数字是什么意思？",
+ "th.aperture":"光圈","th.nearest":"最近清晰","th.farthest":"最远清晰","th.dof":"景深","th.enough":"够不够",
+ "note.diffraction":"△ 代表已进入衍射范围，光圈再缩小整体锐度反而会下降。",
+ "foot.privacy":"全部在你的浏览器计算，不会上传任何数据。",
+ "a11y.near":"最近距离","a11y.far":"最远距离","a11y.width":"宽","a11y.height":"高","a11y.ruler":"景深覆盖示意图",
+ "unit.m":"m","unit.ft":"ft","unit.infinity":"无限远","unit.optM":"米 (m)","unit.optFt":"英尺 (ft)",
+ "sensor.mf":"中画幅 44×33","sensor.ff":"全画幅 36×24","sensor.apsh":"APS-H 28.7×19",
+ "sensor.apsc":"APS-C 23.6×15.7","sensor.apscC":"APS-C Canon 22.3×14.9","sensor.m43":"M4/3 17.3×13",
+ "sensor.one":"1 英寸 13.2×8.8","sensor.i17":"1/1.7 英寸 7.6×5.7","sensor.i23":"1/2.3 英寸 6.17×4.55",
+ "sensor.i28":"1/2.8 英寸 5.6×4.2（监控）","sensor.i30":"1/3 英寸 4.8×3.6（监控）",
+ "quality.screen":"手机／网页浏览（宽松）","quality.screen.hint":"标准值放宽一倍，最容易达成",
+ "quality.normal":"一般输出（标准）","quality.normal.hint":"传统画幅惯用值，多数情况适用",
+ "quality.print":"大图输出（严格）","quality.print.hint":"标准值收紧，放大后仍要锐利",
+ "quality.pixel":"像素级（最严格）","quality.pixel.hint":"以传感器像素间距 ×2 计算",
+ "framing.focal":"沿用同一颗镜头（视角会变）","framing.fov":"保持相同视角（自动换算焦距）",
+ "comp.iso":"自动调 ISO","comp.shutter":"自动调快门","comp.off":"不补偿（手动）",
+ "scenario.group":"合影","scenario.street":"街拍","scenario.event":"活动",
+ "scenario.landscape":"风景","scenario.cctv":"监控",
+ "gloss.focus":"对焦距离","gloss.focus.body":"相机对焦在哪个距离。不是对在最近或最远，而是对在能前后平均分配清晰范围的位置。",
+ "gloss.stop":"最小可用光圈","gloss.stop.body":"f 值最小到这里，再开大景深就不够。数字越大光圈越小、景深越深。",
+ "gloss.coc":"弥散圆直径","gloss.coc.body":"一个点在传感器上可以糊到多大，人眼还是觉得它清晰。这是主观标准，不是物理界线。",
+ "gloss.hyper":"超焦距","gloss.hyper.body":"对焦在这个距离时，从它的一半到无限远都会清晰。拍风景常用。",
+ "gloss.diff":"衍射","gloss.diff.body":"光圈缩太小会因为衍射让整张照片变钝。表格中的 △ 就是提醒你已经越线。",
+ "gloss.exposure":"曝光补偿","gloss.exposure.body":"缩小光圈会让进光量变少。补偿的做法是提高 ISO 或放慢快门，让亮度保持不变。"
+},
+"en":{
+ "meta.title":"Where to focus? Which aperture? · Depth of Field Calculator",
+ "meta.desc":"Enter the distance range you need sharp and get the focus distance and aperture instantly.",
+ "app.title":"Where do I focus? Which aperture?",
+ "app.tagline":"Tell me the near and far distance — I'll work out the rest.",
+ "answer.focus":"Focus distance","answer.stop":"Smallest usable aperture","answer.exposure":"Exposure triangle",
+ "answer.hyper":"Hyperfocal {v}","answer.theory":"Exact value {v}","answer.theoryDiff":"Exact value {v} · diffraction limited",
+ "answer.impossible":"Not possible","answer.impossibleNote":"Even the smallest aperture is not enough",
+ "answer.expNote":"Same brightness as your starting point","answer.expClipped":"Hit the limits — {v} stops off",
+ "verdict.okFlag":"This setup works","verdict.okMsg":"Everything from {near} to {far} will be sharp.",
+ "verdict.okSafe":"Stop down one more for extra safety margin.","verdict.okDiff":"But you have stopped down too far — overall sharpness will drop.",
+ "verdict.noFlag":"This setup won't work","verdict.noFeasible":"Use the two numbers above and {near}–{far} will be covered.",
+ "verdict.noImpossible":"This lens can't deliver that much depth at this distance. Try a wider focal length or step back.",
+ "verdict.badFlag":"Range is reversed","verdict.badMsg":"The far distance must be greater than the near distance.",
+ "btn.apply":"Apply these settings","btn.link":"Copy link","btn.linkDone":"Copied ✓",
+ "btn.linkFail":"Copy the URL manually","btn.reset":"Start over",
+ "step1.title":"What range needs to be sharp?","step1.sub":"From the nearest subject to the farthest — everything in between must be in focus.",
+ "step2.title":"What gear are you using?","step2.sub":"Sensor size and focal length drive how deep the depth of field is.",
+ "step3.title":"Shooting settings","step3.sub":"Drag the sliders until the green band covers the dashed box.",
+ "field.range":"Distance range","field.rangeTo":"to","field.scenarios":"Common scenarios",
+ "field.sensor":"Sensor format","field.focal":"Focal length","field.framing":"When changing format","field.quality":"Quality target",
+ "field.iso":"ISO sensitivity","field.compensate":"When aperture changes",
+ "field.aperture":"Aperture","field.shutter":"Shutter","field.focusDist":"Focus distance",
+ "field.sensorSize":"Sensor size (mm)","field.mp":"Resolution (MP)",
+ "field.coc":"Circle of confusion (mm)","field.customFocal":"Custom focal length (mm)",
+ "hint.scenarios":"Tap to fill in","hint.needDof":"Needs {v} of depth","hint.badRange":"Far must exceed near",
+ "hint.crop":"Crop factor approx. {v}×","hint.customSize":"Custom size","hint.equiv":"{e} mm equivalent",
+ "hint.equivSnap":"{e} mm equiv · ideal {i} mm, snapped to {c} mm",
+ "hint.framingFov":"Changing format snaps to the closest focal length, keeping framing",
+ "hint.framingFocal":"Same focal length on a smaller sensor = telephoto, so depth gets shallower",
+ "hint.diffLimit":"Diffraction limit approx. {v}","hint.diffOver":"Past the diffraction limit {v} — sharpness will drop",
+ "hint.focusOk":"Current focus covers the target","hint.focusMove":"Move to {v}",
+ "hint.autoFill":"Filled in automatically by format","hint.pitch":"Pixel pitch approx. {v} µm",
+ "hint.cocAuto":"Derived from the quality target","hint.cocPixel":"Derived from pixel pitch",
+ "hint.customFocal":"For focal lengths not in the list",
+ "hint.iso":"Baseline sensitivity that compensation starts from",
+ "hint.compIso":"Stopping down raises ISO automatically to keep brightness",
+ "hint.compShutter":"Stopping down slows the shutter automatically to keep brightness",
+ "hint.compOff":"Nothing adjusts when aperture changes — the image gets darker or brighter",
+ "hint.shutterOk":"{v} · handheld safe limit around {s}",
+ "hint.shutterSlow":"{v} is slower than the handheld limit {s} — use a tripod",
+ "key.dof":"Actually sharp","key.target":"Range you need","key.focus":"Focus point","ruler.target":"Target range",
+ "slider.apLow":"f/1.0 shallow","slider.apHigh":"f/32 deep",
+ "slider.shLow":"30s slow","slider.shHigh":"1/8000 fast",
+ "details.advanced":"Advanced: custom size and circle of confusion","details.table":"Aperture comparison","details.glossary":"What do these numbers mean?",
+ "th.aperture":"Aperture","th.nearest":"Nearest sharp","th.farthest":"Farthest sharp","th.dof":"Depth","th.enough":"Covers?",
+ "note.diffraction":"△ means you are past the diffraction limit — stopping down further reduces overall sharpness.",
+ "foot.privacy":"Everything is calculated in your browser. Nothing is uploaded.",
+ "a11y.near":"Near distance","a11y.far":"Far distance","a11y.width":"Width","a11y.height":"Height","a11y.ruler":"Depth of field coverage diagram",
+ "unit.m":"m","unit.ft":"ft","unit.infinity":"infinity","unit.optM":"Metres (m)","unit.optFt":"Feet (ft)",
+ "sensor.mf":"Medium format 44×33","sensor.ff":"Full frame 36×24","sensor.apsh":"APS-H 28.7×19",
+ "sensor.apsc":"APS-C 23.6×15.7","sensor.apscC":"APS-C Canon 22.3×14.9","sensor.m43":"Micro 4/3 17.3×13",
+ "sensor.one":"1\" type 13.2×8.8","sensor.i17":"1/1.7\" type 7.6×5.7","sensor.i23":"1/2.3\" type 6.17×4.55",
+ "sensor.i28":"1/2.8\" type 5.6×4.2 (CCTV)","sensor.i30":"1/3\" type 4.8×3.6 (CCTV)",
+ "quality.screen":"Phone / web viewing (relaxed)","quality.screen.hint":"Twice the standard value — easiest to achieve",
+ "quality.normal":"Normal output (standard)","quality.normal.hint":"Traditional per-format value, fine for most work",
+ "quality.print":"Large print (strict)","quality.print.hint":"Tighter than standard, stays sharp when enlarged",
+ "quality.pixel":"Pixel level (strictest)","quality.pixel.hint":"Based on 2× the sensor pixel pitch",
+ "framing.focal":"Keep the same lens (framing changes)","framing.fov":"Keep the same framing (snap focal length)",
+ "comp.iso":"Adjust ISO","comp.shutter":"Adjust shutter","comp.off":"No compensation (manual)",
+ "scenario.group":"Group photo","scenario.street":"Street","scenario.event":"Event",
+ "scenario.landscape":"Landscape","scenario.cctv":"Surveillance",
+ "gloss.focus":"Focus distance","gloss.focus.body":"Where the lens is focused. Not the nearest or farthest subject, but the point that balances sharpness front and back.",
+ "gloss.stop":"Smallest usable aperture","gloss.stop.body":"Open wider than this and depth of field falls short. Larger f-numbers mean a smaller opening and deeper focus.",
+ "gloss.coc":"Circle of confusion","gloss.coc.body":"How large a point may blur on the sensor while still looking sharp. It is a perceptual convention, not a physical boundary.",
+ "gloss.hyper":"Hyperfocal distance","gloss.hyper.body":"Focus here and everything from half that distance to infinity is acceptably sharp. Common for landscapes.",
+ "gloss.diff":"Diffraction","gloss.diff.body":"Stopping down too far softens the whole frame through diffraction. The △ marks where you cross that line.",
+ "gloss.exposure":"Exposure compensation","gloss.exposure.body":"A smaller aperture lets in less light. Raising ISO or slowing the shutter brings the brightness back."
+},
+"ja":{
+ "meta.title":"どこにピント？どの絞り？· 被写界深度計算機",
+ "meta.desc":"ピントを合わせたい距離を入れるだけで、絞りとピント位置がすぐ分かります。",
+ "app.title":"どこにピントを合わせる？絞りは？",
+ "app.tagline":"手前と奥の距離を入れれば、あとは計算します。",
+ "answer.focus":"ピント距離","answer.stop":"使える最小の絞り","answer.exposure":"露出の組み合わせ",
+ "answer.hyper":"過焦点距離 {v}","answer.theory":"理論値 {v}","answer.theoryDiff":"理論値 {v}・回折の影響あり",
+ "answer.impossible":"実現できません","answer.impossibleNote":"最小絞りでも足りません",
+ "answer.expNote":"元の設定と同じ明るさ","answer.expClipped":"限界に達し、{v} 段ずれています",
+ "verdict.okFlag":"この設定で撮れます","verdict.okMsg":"{near}〜{far} はすべてピントが合います。",
+ "verdict.okSafe":"念のため、あと1段絞ると安心です。","verdict.okDiff":"ただし絞りすぎで、全体の解像感が落ちます。",
+ "verdict.noFlag":"この設定では撮れません","verdict.noFeasible":"上の2つの数値に合わせれば {near}〜{far} をカバーできます。",
+ "verdict.noImpossible":"このレンズではこの距離でそこまで深い被写界深度は得られません。広角に変えるか、下がって撮影してください。",
+ "verdict.badFlag":"距離が逆です","verdict.badMsg":"奥の距離は手前より大きくしてください。",
+ "btn.apply":"この設定を適用","btn.link":"リンクをコピー","btn.linkDone":"コピーしました ✓",
+ "btn.linkFail":"URLを手動でコピーしてください","btn.reset":"やり直す",
+ "step1.title":"どこからどこまで撮りますか？","step1.sub":"一番手前の被写体から一番奥まで、その範囲すべてをシャープにします。",
+ "step2.title":"使用する機材は？","step2.sub":"センサーサイズと焦点距離が被写界深度を大きく左右します。",
+ "step3.title":"撮影設定","step3.sub":"緑の帯が破線の枠を覆えば成功です。",
+ "field.range":"距離の範囲","field.rangeTo":"〜","field.scenarios":"よくある場面",
+ "field.sensor":"センサーサイズ","field.focal":"焦点距離","field.framing":"サイズ変更時","field.quality":"画質の基準",
+ "field.iso":"ISO感度","field.compensate":"絞り変更時",
+ "field.aperture":"絞り","field.shutter":"シャッター","field.focusDist":"ピント距離",
+ "field.sensorSize":"センサー寸法（mm）","field.mp":"有効画素数（MP）",
+ "field.coc":"許容錯乱円（mm）","field.customFocal":"焦点距離を指定（mm）",
+ "hint.scenarios":"タップで入力","hint.needDof":"{v} の深度が必要","hint.badRange":"奥は手前より大きく",
+ "hint.crop":"クロップ係数 約 {v}×","hint.customSize":"カスタム寸法","hint.equiv":"{e} mm 相当の画角",
+ "hint.equivSnap":"{e} mm 相当｜理想 {i} mm、最も近い {c} mm を選択",
+ "hint.framingFov":"サイズ変更時に最も近い焦点距離へ自動調整し、画角を維持します",
+ "hint.framingFocal":"小さいセンサーで同じ焦点距離は望遠になり、深度は浅くなります",
+ "hint.diffLimit":"回折限界 約 {v}","hint.diffOver":"回折限界 {v} を超え、解像感が低下します",
+ "hint.focusOk":"現在の位置で目標をカバーできます","hint.focusMove":"{v} へ移動を推奨",
+ "hint.autoFill":"サイズを選ぶと自動入力されます","hint.pitch":"画素ピッチ 約 {v} µm",
+ "hint.cocAuto":"画質の基準から自動計算","hint.cocPixel":"画素ピッチから自動計算",
+ "hint.customFocal":"一覧にない焦点距離はこちら",
+ "hint.iso":"補正の基準となる感度",
+ "hint.compIso":"絞ると自動でISOを上げ、明るさを保ちます",
+ "hint.compShutter":"絞ると自動でシャッターを遅くし、明るさを保ちます",
+ "hint.compOff":"絞りを変えても調整せず、明るさが変化します",
+ "hint.shutterOk":"{v}・手持ちの目安は {s}",
+ "hint.shutterSlow":"{v} は手持ちの目安 {s} より遅いため、三脚を推奨します",
+ "key.dof":"実際にシャープな範囲","key.target":"撮りたい範囲","key.focus":"ピント位置","ruler.target":"撮りたい範囲",
+ "slider.apLow":"f/1.0 浅い","slider.apHigh":"f/32 深い",
+ "slider.shLow":"30秒 遅い","slider.shHigh":"1/8000 速い",
+ "details.advanced":"詳細設定：寸法と許容錯乱円","details.table":"絞りごとの比較","details.glossary":"これらの数値の意味",
+ "th.aperture":"絞り","th.nearest":"手前の限界","th.farthest":"奥の限界","th.dof":"深度","th.enough":"足りる？",
+ "note.diffraction":"△ は回折限界を超えたことを示します。さらに絞ると全体の解像感が下がります。",
+ "foot.privacy":"すべてブラウザ内で計算され、データは送信されません。",
+ "a11y.near":"手前の距離","a11y.far":"奥の距離","a11y.width":"幅","a11y.height":"高さ","a11y.ruler":"被写界深度の範囲図",
+ "unit.m":"m","unit.ft":"ft","unit.infinity":"無限遠","unit.optM":"メートル (m)","unit.optFt":"フィート (ft)",
+ "sensor.mf":"中判 44×33","sensor.ff":"フルサイズ 36×24","sensor.apsh":"APS-H 28.7×19",
+ "sensor.apsc":"APS-C 23.6×15.7","sensor.apscC":"APS-C Canon 22.3×14.9","sensor.m43":"マイクロフォーサーズ 17.3×13",
+ "sensor.one":"1型 13.2×8.8","sensor.i17":"1/1.7型 7.6×5.7","sensor.i23":"1/2.3型 6.17×4.55",
+ "sensor.i28":"1/2.8型 5.6×4.2（監視）","sensor.i30":"1/3型 4.8×3.6（監視）",
+ "quality.screen":"スマホ・Web表示（緩め）","quality.screen.hint":"標準値の2倍。最も達成しやすい",
+ "quality.normal":"通常出力（標準）","quality.normal.hint":"従来のサイズ別慣用値。多くの用途に適合",
+ "quality.print":"大判プリント（厳しめ）","quality.print.hint":"標準より厳しく、拡大してもシャープ",
+ "quality.pixel":"画素レベル（最も厳しい）","quality.pixel.hint":"画素ピッチ ×2 で計算",
+ "framing.focal":"同じレンズを使う（画角が変わる）","framing.fov":"同じ画角を保つ（焦点距離を自動調整）",
+ "comp.iso":"ISOで補正","comp.shutter":"シャッターで補正","comp.off":"補正しない（マニュアル）",
+ "scenario.group":"集合写真","scenario.street":"スナップ","scenario.event":"イベント",
+ "scenario.landscape":"風景","scenario.cctv":"監視カメラ",
+ "gloss.focus":"ピント距離","gloss.focus.body":"レンズを合わせる距離。最も手前でも奥でもなく、前後のシャープさが均等になる位置です。",
+ "gloss.stop":"使える最小の絞り","gloss.stop.body":"これより開けると深度が足りません。f値が大きいほど開口は小さく、深度は深くなります。",
+ "gloss.coc":"許容錯乱円","gloss.coc.body":"点がセンサー上でどこまでボケても鮮明に見えるかという基準。物理的な境界ではなく知覚上の慣例です。",
+ "gloss.hyper":"過焦点距離","gloss.hyper.body":"ここにピントを合わせると、その半分の距離から無限遠までが実用上シャープになります。風景撮影で多用されます。",
+ "gloss.diff":"回折","gloss.diff.body":"絞りすぎると回折で画面全体が甘くなります。表の △ がその境界を示します。",
+ "gloss.exposure":"露出補正","gloss.exposure.body":"絞りを絞ると光量が減ります。ISOを上げるかシャッターを遅くすると明るさが戻ります。"
+}
+};
+
+const LOCALES=[
+ {id:"zh-Hant",label:"繁體中文"},
+ {id:"zh-Hans",label:"简体中文"},
+ {id:"en",     label:"English"},
+ {id:"ja",     label:"日本語"}
+];
+const FALLBACK="en";
+
+const I18n={
+ locale:"zh-Hant",
+ has:id=>Object.prototype.hasOwnProperty.call(MESSAGES,id),
+ detect(){
+  const q=new URLSearchParams(location.hash.slice(1)).get("lang");
+  if(q&&I18n.has(q))return q;
+  try{const st=localStorage.getItem("dof.lang");if(st&&I18n.has(st))return st}catch{}
+  for(const nav of navigator.languages??[navigator.language]){
+   if(!nav)continue;
+   if(I18n.has(nav))return nav;
+   const low=nav.toLowerCase();
+   if(low.startsWith("zh"))return /hans|cn|sg/.test(low)?"zh-Hans":"zh-Hant";
+   const base=low.split("-")[0];
+   const hit=LOCALES.find(l=>l.id.toLowerCase().split("-")[0]===base);
+   if(hit)return hit.id;
+  }
+  return "zh-Hant";
+ },
+ set(id){
+  I18n.locale=I18n.has(id)?id:FALLBACK;
+  try{localStorage.setItem("dof.lang",I18n.locale)}catch{}
+  document.documentElement.lang=I18n.locale;
+ },
+ t(key,vars){
+  const dict=MESSAGES[I18n.locale]??MESSAGES[FALLBACK];
+  let s=dict[key]??MESSAGES[FALLBACK][key]??key;
+  if(vars)for(const[k,v]of Object.entries(vars))s=s.replaceAll(`{${k}}`,v);
+  return s;
+ },
+ paint(root=document){
+  root.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=I18n.t(n.dataset.i18n));
+  root.querySelectorAll("[data-i18n-aria]").forEach(n=>n.setAttribute("aria-label",I18n.t(n.dataset.i18nAria)));
+  document.title=I18n.t("meta.title");
+  const m=document.getElementById("metaDesc");
+  if(m)m.content=I18n.t("meta.desc");
+ }
+};
+const t=I18n.t;
+
+/* ═════════════════════════════════════════════════
+   2. Domain data
+   ═════════════════════════════════════════════════ */
+const SENSORS=[
+ {id:"mf",w:44,h:33,coc:.053},{id:"ff",w:36,h:24,coc:.030},
+ {id:"apsh",w:28.7,h:19,coc:.023},{id:"apsc",w:23.6,h:15.7,coc:.020},
+ {id:"apscC",w:22.3,h:14.9,coc:.019},{id:"m43",w:17.3,h:13,coc:.015},
+ {id:"one",w:13.2,h:8.8,coc:.011},{id:"i17",w:7.6,h:5.7,coc:.006},
+ {id:"i23",w:6.17,h:4.55,coc:.005},{id:"i28",w:5.6,h:4.2,coc:.0047},
+ {id:"i30",w:4.8,h:3.6,coc:.0040}
+];
+const FOCALS=[4,6,8,12,14,16,20,24,28,35,50,85,105,135,200,300];
+const STOPS=[1.0,1.2,1.4,1.8,2.0,2.8,4,5.6,8,11,16,22,32];
+const ISOS=[50,100,200,400,800,1600,3200,6400,12800,25600,51200];
+const SHUTTERS=[30,15,8,4,2,1,1/2,1/4,1/8,1/15,1/30,1/60,1/125,1/250,
+                1/500,1/1000,1/2000,1/4000,1/8000];
+const QUALITY=[
+ {id:"screen",mult:2.0},{id:"normal",mult:1.0},
+ {id:"print",mult:0.6},{id:"pixel",mult:null}
+];
+const FRAMINGS=["focal","fov"];
+const COMPS=["iso","shutter","off"];
+const SCENARIOS=[
+ {id:"group",near:3,far:6},{id:"street",near:5,far:12},{id:"event",near:8,far:13},
+ {id:"landscape",near:10,far:200},{id:"cctv",near:4,far:20}
+];
+const GLOSSARY=["focus","stop","coc","hyper","diff","exposure"];
+const LAMBDA=.00055, FF_DIAG=Math.hypot(36,24), FT=3.280839895;
+
+const DEF=Object.freeze({sensor:"ff",sw:36,sh:24,mp:24,focal:35,focalIdeal:null,
+ quality:"normal",framing:"focal",stop:2.8,focus:9.9,near:8,far:13,unit:"m",
+ iso:400,shutter:1/125,compensate:"iso",drift:0});
+
+/* ═════════════════════════════════════════════════
+   3. Optics — pure
+   ═════════════════════════════════════════════════ */
+const O={
+ pitch:(w,h,mp)=>{const a=w/h;return w/(Math.sqrt(mp*1e6/a)*a)},
+ hyper:(f,N,c)=>f*f/(N*c)+f,
+ limits(f,N,c,s){const H=O.hyper(f,N,c);
+  return{H,near:H*s/(H+s-f),far:H>s-f?H*s/(H-s+f):Infinity}},
+ optFocus:(f,n,d)=>(2*n*d-f*(n+d))/(n+d-2*f),
+ reqStop(f,c,n,d){const s=O.optFocus(f,n,d);return f*f/(c*(n*(s-f)/(s-n)-f))},
+ diffract:c=>c/(2.44*LAMBDA),
+ crop:(w,h)=>FF_DIAG/Math.hypot(w,h),
+ covers:(l,n,d)=>l.near<=n&&l.far>=d
+};
+const nearestFocal=v=>FOCALS.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a);
+
+/* ── Exposure: keep N²/(T·ISO) constant ── */
+const Exp={
+ stops:(a,b)=>2*Math.log2(b/a),
+ snap:(arr,v)=>arr.reduce((x,y)=>Math.abs(Math.log2(y/v))<Math.abs(Math.log2(x/v))?y:x),
+ handheld:(focal,crop)=>1/(focal*crop),
+ label(sec){
+  if(sec>=1)return `${Number.isInteger(sec)?sec:sec.toFixed(1)}s`;
+  return `1/${Math.round(1/sec)}`;
+ },
+ compensate(need,iso,shutter,mode){
+  if(mode==="off"||Math.abs(need)<1e-9)return{iso,shutter,drift:need};
+  const gain=(cur,arr,want)=>{
+   const lo=Math.min(arr[0],arr.at(-1)), hi=Math.max(arr[0],arr.at(-1));
+   const hit=Exp.snap(arr,Math.min(Math.max(cur*Math.pow(2,want),lo),hi));
+   return{val:hit,used:Math.log2(hit/cur)};
+  };
+  let nIso=iso,nSh=shutter,left=need;
+  if(mode==="iso"){
+   const a=gain(nIso,ISOS,left); nIso=a.val; left-=a.used;
+   if(Math.abs(left)>0.05){const b=gain(nSh,SHUTTERS,left);nSh=b.val;left-=b.used;}
+  }else{
+   const a=gain(nSh,SHUTTERS,left); nSh=a.val; left-=a.used;
+   if(Math.abs(left)>0.05){const b=gain(nIso,ISOS,left);nIso=b.val;left-=b.used;}
+  }
+  return{iso:nIso,shutter:nSh,drift:left};
+ }
+};
+
+/* ═════════════════════════════════════════════════
+   4. Units + formatting
+   ═════════════════════════════════════════════════ */
+const U={
+ factor:()=>S.d.unit==="ft"?FT:1,
+ suffix:()=>t(S.d.unit==="ft"?"unit.ft":"unit.m"),
+ dec:()=>S.d.unit==="ft"?0:1,
+ n(v,d){return new Intl.NumberFormat(I18n.locale,
+   {minimumFractionDigits:d,maximumFractionDigits:d}).format(v)},
+ raw(mm,d=U.dec()){return Number.isFinite(mm)?U.n(mm/1000*U.factor(),d):"∞"},
+ disp(mm,d=U.dec()){return Number.isFinite(mm)
+   ?`${U.n(mm/1000*U.factor(),d)} ${U.suffix()}`:t("unit.infinity")},
+ out:m=>+(m*U.factor()).toFixed(U.dec()===0?1:2),
+ in:v=>v/U.factor()
+};
+const F={
+ stop:v=>Number.isFinite(v)?`f/${U.n(v,1)}`:"—",
+ snap:v=>STOPS.find(n=>n>=v)??STOPS.at(-1)
+};
+
+/* ═════════════════════════════════════════════════
+   5. State
+   ═════════════════════════════════════════════════ */
+const S={d:{...DEF},subs:new Set(),
+ on(fn){this.subs.add(fn)},
+ set(p){Object.assign(this.d,p);this.subs.forEach(fn=>fn(this.d))},
+ reset(){this.set({...DEF,unit:this.d.unit})}};
+
+/* ═════════════════════════════════════════════════
+   6. DOM helpers
+   ═════════════════════════════════════════════════ */
+const $=i=>document.getElementById(i);
+const opts=(node,items,value)=>{
+ node.replaceChildren(...items.map(o=>new Option(o.label,o.value)));
+ if(value!==undefined)node.value=value;
+};
+const ok=(v,min,fb)=>Number.isFinite(v)&&v>=min?v:fb;
+
+/* ═════════════════════════════════════════════════
+   7. Derive — state → view model
+   ═════════════════════════════════════════════════ */
+function derive(d){
+ const s=d.focus*1e3, tn=d.near*1e3, tf=d.far*1e3;
+ const pitch=O.pitch(d.sw,d.sh,d.mp);
+ const base=(SENSORS.find(x=>x.id===d.sensor)??SENSORS[1]).coc;
+ const q=QUALITY.find(x=>x.id===d.quality)??QUALITY[1];
+ const coc=q.mult===null?pitch*2:base*q.mult;
+ const lim=O.limits(d.focal,d.stop,coc,s);
+ const reqN=O.reqStop(d.focal,coc,tn,tf);
+ const hh=Exp.handheld(d.focal,O.crop(d.sw,d.sh));
+ return{pitch,coc,lim,s,tn,tf,reqN,
+  optF:O.optFocus(d.focal,tn,tf),
+  snap:F.snap(reqN),
+  diffN:O.diffract(coc),
+  equiv:d.focal*O.crop(d.sw,d.sh),
+  handheld:hh,
+  tooSlow:d.shutter>hh*1.05,
+  covered:O.covers(lim,tn,tf),
+  diffracted:d.stop>O.diffract(coc),
+  valid:tf>tn,
+  feasible:Number.isFinite(reqN)&&reqN>0&&reqN<=STOPS.at(-1)};
+}
+
+/* ═════════════════════════════════════════════════
+   8. View
+   ═════════════════════════════════════════════════ */
+const V={
+ localise(d){
+  I18n.paint();
+  opts($("lang"),LOCALES.map(l=>({value:l.id,label:l.label})),I18n.locale);
+  opts($("unit"),[{value:"m",label:t("unit.optM")},{value:"ft",label:t("unit.optFt")}],d.unit);
+  opts($("sensor"),SENSORS.map(s=>({value:s.id,label:t(`sensor.${s.id}`)})),d.sensor);
+  opts($("focal"),FOCALS.map(f=>({value:f,label:`${f} mm`})));
+  opts($("quality"),QUALITY.map(q=>({value:q.id,label:t(`quality.${q.id}`)})),d.quality);
+  opts($("framing"),FRAMINGS.map(f=>({value:f,label:t(`framing.${f}`)})),d.framing);
+  opts($("iso"),ISOS.map(v=>({value:v,label:`ISO ${v}`})),d.iso);
+  opts($("compensate"),COMPS.map(c=>({value:c,label:t(`comp.${c}`)})),d.compensate);
+  $("rLabel").textContent=t("ruler.target");
+  $("apRange").max=STOPS.length-1;
+  $("shRange").max=SHUTTERS.length-1;
+  V.scenarios(d);
+  V.glossary();
+ },
+
+ scenarios(d){
+  $("scenarios").replaceChildren(...SCENARIOS.map(sc=>{
+   const b=document.createElement("button");
+   b.className="chip";b.type="button";
+   const lo=U.n(sc.near*U.factor(),0);
+   const hi=sc.far>=200?"∞":U.n(sc.far*U.factor(),0);
+   b.textContent=`${t(`scenario.${sc.id}`)} ${lo}–${hi} ${U.suffix()}`;
+   b.dataset.near=sc.near;b.dataset.far=sc.far;
+   b.onclick=()=>S.set({near:sc.near,far:sc.far});
+   return b;}));
+ },
+
+ glossary(){
+  $("glossary").replaceChildren(...GLOSSARY.flatMap(k=>{
+   const dt=document.createElement("dt");dt.textContent=t(`gloss.${k}`);
+   const dd=document.createElement("dd");dd.textContent=t(`gloss.${k}.body`);
+   return[dt,dd];}));
+ },
+
+ sync(d,v){
+  const stepDist=d.unit==="ft"?1:0.5;
+  $("near").value=U.out(d.near); $("near").step=stepDist;
+  $("far").value=U.out(d.far);   $("far").step=stepDist;
+  $("sensor").value=d.sensor;
+  $("focal").value=FOCALS.includes(d.focal)?d.focal:"";
+  $("quality").value=d.quality; $("framing").value=d.framing;
+  $("iso").value=d.iso; $("compensate").value=d.compensate;
+  $("sw").value=d.sw; $("sh").value=d.sh; $("mp").value=d.mp;
+  $("focalNum").value=d.focal; $("coc").value=v.coc.toFixed(4);
+
+  $("apRange").value=Math.max(0,STOPS.indexOf(F.snap(d.stop)));
+  $("apVal").textContent=`f/${U.n(d.stop,1)}`;
+  $("shRange").value=Math.max(0,SHUTTERS.indexOf(Exp.snap(SHUTTERS,d.shutter)));
+  $("shVal").textContent=Exp.label(d.shutter);
+
+  const topM=Math.max(60,Math.ceil(d.far*1.5));
+  const r=$("fdRange");
+  r.min=U.out(0.5); r.max=U.out(topM); r.step=d.unit==="ft"?0.5:0.1;
+  r.value=Math.min(U.out(d.focus),U.out(topM));
+  $("fdMin").textContent=U.disp(500,U.dec());
+  $("fdMax").textContent=U.disp(topM*1000,0);
+  $("fdVal").textContent=U.disp(d.focus*1000);
+
+  [...$("scenarios").children].forEach(b=>
+   b.setAttribute("aria-pressed",String(+b.dataset.near===d.near&&+b.dataset.far===d.far)));
+ },
+
+ verdict(d,v){
+  const box=$("verdict"), near=U.disp(v.tn), far=U.disp(v.tf);
+  if(!v.valid){
+   box.dataset.ok="false"; $("vIcon").textContent="!";
+   $("vFlag").textContent=t("verdict.badFlag");
+   $("vMsg").textContent=t("verdict.badMsg");
+   $("aFocus").textContent="—"; $("aStop").textContent="—"; $("aExp").textContent="—";
+   $("aFocusNote").textContent=""; $("aStopNote").textContent=""; $("aExpNote").textContent="";
+   $("btnApply").disabled=true; return;
+  }
+  $("btnApply").disabled=false;
+  $("aFocus").textContent=U.disp(v.optF);
+  $("aFocusNote").textContent=t("answer.hyper",{v:U.disp(v.lim.H)});
+  $("aStop").textContent=v.feasible?`f/${U.n(v.snap,1)}`:t("answer.impossible");
+  $("aStopNote").textContent=v.feasible
+   ? t(v.snap>v.diffN?"answer.theoryDiff":"answer.theory",{v:F.stop(v.reqN)})
+   : t("answer.impossibleNote");
+
+  $("aExp").textContent=`f/${U.n(d.stop,1)} · ${Exp.label(d.shutter)} · ISO ${d.iso}`;
+  const drift=Math.abs(d.drift)>0.05;
+  $("aExpNote").textContent=drift
+   ? t("answer.expClipped",{v:U.n(Math.abs(d.drift),1)}) : t("answer.expNote");
+  $("aExpNote").className="answer__note"+(drift?" exp-warn":"");
+
+  box.dataset.ok=String(v.covered);
+  $("vIcon").textContent=v.covered?"✓":"✗";
+  $("vFlag").textContent=t(v.covered?"verdict.okFlag":"verdict.noFlag");
+  $("vMsg").textContent=v.covered
+   ? t("verdict.okMsg",{near,far})+t(v.diffracted?"verdict.okDiff":"verdict.okSafe")
+   : (v.feasible?t("verdict.noFeasible",{near,far}):t("verdict.noImpossible"));
+ },
+
+ ruler(v){
+  const cap=Math.max(v.tf*1.35,Number.isFinite(v.lim.far)?v.lim.far*1.08:v.tf*1.9,v.s*1.3);
+  const p=x=>Math.max(0,Math.min(100,x/cap*100));
+  const end=p(Number.isFinite(v.lim.far)?v.lim.far:cap);
+  Object.assign($("rDof").style,{left:p(v.lim.near)+"%",width:(end-p(v.lim.near))+"%"});
+  Object.assign($("rTarget").style,{left:p(v.tn)+"%",width:(p(v.tf)-p(v.tn))+"%"});
+  $("rLabel").style.left=((p(v.tn)+p(v.tf))/2)+"%";
+  $("rFocus").style.left=p(v.s)+"%";
+  $("rTicks").replaceChildren(...[0,.25,.5,.75,1].map(r=>{
+   const n=document.createElement("span");
+   n.textContent=U.raw(cap*r,0)+U.suffix();return n;}));
+ },
+
+ hints(d,v){
+  const sn=SENSORS.find(s=>s.id===d.sensor);
+  $("sensorHint").textContent=sn
+   ? t("hint.crop",{v:U.n(O.crop(d.sw,d.sh),1)}) : t("hint.customSize");
+  const ideal=d.focalIdeal;
+  $("focalHint").textContent=(ideal&&Math.abs(ideal-d.focal)>0.6)
+   ? t("hint.equivSnap",{e:U.n(v.equiv,0),i:ideal,c:d.focal})
+   : t("hint.equiv",{e:U.n(v.equiv,0)});
+  $("framingHint").textContent=t(d.framing==="fov"?"hint.framingFov":"hint.framingFocal");
+  $("framingHint").className="f__hint"+(d.framing==="focal"&&v.equiv>50?" f__hint--warn":"");
+  $("qualityHint").textContent=t(`quality.${d.quality}.hint`);
+  $("isoHint").textContent=t("hint.iso");
+  $("compHint").textContent=t(d.compensate==="iso"?"hint.compIso"
+    :d.compensate==="shutter"?"hint.compShutter":"hint.compOff");
+
+  $("apHint").textContent=v.diffracted
+   ? t("hint.diffOver",{v:F.stop(v.diffN)}) : t("hint.diffLimit",{v:F.stop(v.diffN)});
+  $("apHint").className="f__hint"+(v.diffracted?" f__hint--warn":"");
+
+  const hh=Exp.label(Exp.snap(SHUTTERS,v.handheld));
+  $("shHint").textContent=t(v.tooSlow?"hint.shutterSlow":"hint.shutterOk",
+    {v:Exp.label(d.shutter),s:hh});
+  $("shHint").className="f__hint"+(v.tooSlow?" f__hint--warn":"");
+
+  $("fdHint").textContent=v.covered?t("hint.focusOk"):t("hint.focusMove",{v:U.disp(v.optF)});
+  $("rangeHint").textContent=v.valid
+   ? t("hint.needDof",{v:U.disp(v.tf-v.tn)}) : t("hint.badRange");
+  $("rangeHint").className="f__hint"+(v.valid?"":" f__hint--warn");
+  $("far").setAttribute("aria-invalid",String(!v.valid));
+  $("mpHint").textContent=t("hint.pitch",{v:U.n(v.pitch*1000,2)});
+  $("cocHint").textContent=t(d.quality==="pixel"?"hint.cocPixel":"hint.cocAuto");
+ },
+
+ table(d,v){
+  $("tbody").replaceChildren(...STOPS.map(N=>{
+   const l=O.limits(d.focal,N,v.coc,v.s);
+   const good=O.covers(l,v.tn,v.tf), df=N>v.diffN;
+   const tr=document.createElement("tr");
+   tr.dataset.now=String(N===F.snap(d.stop));
+   tr.innerHTML=`<td>f/${U.n(N,1)}</td><td>${U.raw(l.near)}</td><td>${U.raw(l.far)}</td>`+
+    `<td>${Number.isFinite(l.far)?U.raw(l.far-l.near):"∞"}</td>`+
+    `<td class="${good?"good":"bad"}">${good?"✓":"✗"}${df?" △":""}</td>`;
+   return tr;}));
+ },
+
+ render(d){
+  const v=derive(d);
+  V.sync(d,v); V.hints(d,v); V.verdict(d,v); V.ruler(v); V.table(d,v);
+  V.last=v;
+ }
+};
+
+/* ═════════════════════════════════════════════════
+   9. Persistence — URL hash (share) + localStorage (recall)
+   ═════════════════════════════════════════════════ */
+/** Coerce an untrusted record against DEF's shape. */
+function sanitise(src){
+ const o={};
+ for(const[k,dv]of Object.entries(DEF)){
+  const val=src?.[k];
+  if(val===undefined||val===null)continue;
+  if(typeof dv==="number"){
+   const n=typeof val==="number"?val:parseFloat(val);
+   if(Number.isFinite(n)&&n>0)o[k]=n;
+  }else if(typeof dv==="string"){
+   if(typeof val==="string"&&val)o[k]=val;
+  }
+ }
+ return Object.keys(o).length?o:null;
+}
+
+const Url={
+ read(){
+  const q=new URLSearchParams(location.hash.slice(1));
+  if(![...q].length)return null;
+  return sanitise(Object.fromEntries(q));
+ },
+ write(d){
+  history.replaceState(null,"","#"+new URLSearchParams({...d,lang:I18n.locale}));
+ }
+};
+
+const Store={
+ KEY:"dof.state",
+ VER:2,                       // bump when DEF's shape changes; stale caches expire
+ read(){
+  try{
+   const raw=JSON.parse(localStorage.getItem(Store.KEY)||"null");
+   return raw&&raw.v===Store.VER?sanitise(raw.d):null;
+  }catch{return null}
+ },
+ write(d){
+  try{localStorage.setItem(Store.KEY,JSON.stringify({v:Store.VER,d}))}catch{}
+ },
+ clear(){try{localStorage.removeItem(Store.KEY)}catch{}}
+};
+
+/* ═════════════════════════════════════════════════
+   10. Controller
+   ═════════════════════════════════════════════════ */
+for(const id of["near","far"])
+ $(id).addEventListener("input",e=>{
+  const v=parseFloat(e.target.value);
+  if(Number.isFinite(v))S.set({[id]:U.in(v)});
+ });
+
+for(const[id,min]of Object.entries({sw:1,sh:1,mp:1,focalNum:1}))
+ $(id).addEventListener("input",e=>{
+  const key=id==="focalNum"?"focal":id;
+  const patch={[key]:ok(parseFloat(e.target.value),min,S.d[key])};
+  if(key==="focal")patch.focalIdeal=null;
+  S.set(patch);
+ });
+
+$("sensor").onchange=e=>{
+ const s=SENSORS.find(x=>x.id===e.target.value), d=S.d;
+ const p={sensor:s.id,sw:s.w,sh:s.h,focalIdeal:null};
+ if(d.framing==="fov"){
+  const ideal=d.focal*O.crop(d.sw,d.sh)/O.crop(s.w,s.h);
+  p.focal=nearestFocal(ideal);
+  p.focalIdeal=+ideal.toFixed(1);
+ }
+ S.set(p);
+};
+$("focal").onchange   = e=>S.set({focal:+e.target.value,focalIdeal:null});
+$("quality").onchange = e=>S.set({quality:e.target.value});
+$("framing").onchange = e=>S.set({framing:e.target.value});
+
+/** Aperture is the only control that rebalances the exposure triangle. */
+$("apRange").oninput=e=>{
+ const next=STOPS[+e.target.value], d=S.d;
+ const r=Exp.compensate(Exp.stops(d.stop,next),d.iso,d.shutter,d.compensate);
+ S.set({stop:next,iso:r.iso,shutter:r.shutter,drift:r.drift});
+};
+$("iso").onchange        = e=>S.set({iso:+e.target.value,drift:0});
+$("shRange").oninput     = e=>S.set({shutter:SHUTTERS[+e.target.value],drift:0});
+$("compensate").onchange = e=>S.set({compensate:e.target.value,drift:0});
+$("fdRange").oninput     = e=>S.set({focus:U.in(+e.target.value)});
+
+$("unit").onchange=e=>{S.set({unit:e.target.value});V.localise(S.d);V.render(S.d)};
+$("lang").onchange=e=>{I18n.set(e.target.value);V.localise(S.d);V.render(S.d)};
+
+$("btnApply").onclick=()=>{
+ const d=S.d, next=V.last.feasible?V.last.snap:STOPS.at(-1);
+ const r=Exp.compensate(Exp.stops(d.stop,next),d.iso,d.shutter,d.compensate);
+ S.set({focus:+(V.last.optF/1000).toFixed(2),stop:next,
+        iso:r.iso,shutter:r.shutter,drift:r.drift});
+};
+$("btnReset").onclick=()=>{Store.clear();S.reset()};
+$("btnLink").onclick=async e=>{
+ Url.write(S.d);
+ const done=t("btn.linkDone"), fail=t("btn.linkFail"), orig=t("btn.link");
+ try{await navigator.clipboard.writeText(location.href);e.target.textContent=done}
+ catch{e.target.textContent=fail}
+ setTimeout(()=>{e.target.textContent=orig},1600);
+};
+
+/* ═════════════════════════════════════════════════
+   11. Bootstrap — URL beats storage beats defaults
+   ═════════════════════════════════════════════════ */
+I18n.set(I18n.detect());
+const restored=Url.read()??Store.read();
+if(restored)Object.assign(S.d,restored);
+else if(/^en/i.test(I18n.locale)&&/US|LR|MM/i.test(navigator.language||""))S.d.unit="ft";
+
+V.localise(S.d);
+S.on(V.render);
+
+let saveJob=0;
+S.on(d=>{clearTimeout(saveJob);saveJob=setTimeout(()=>Store.write(d),400)});
+
+S.set({});
+})();
+</script>
+</body>
+</html>
